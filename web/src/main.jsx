@@ -55,7 +55,7 @@ const initPushNotifications = () => {
 
 initPushNotifications();
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+if ('serviceWorker' in navigator && import.meta.env.PROD && !import.meta.env.VITE_ONESIGNAL_APP_ID) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js').catch((error) => {
       console.warn('[service-worker] registration failed', error);

@@ -72,6 +72,18 @@ function getOneSignalSubscriptionState(OneSignal) {
   };
 }
 
+async function waitForOneSignalSubscription(OneSignal) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < 12000) {
+    const state = getOneSignalSubscriptionState(OneSignal);
+    if (state.isSubscribed) return state;
+    await new Promise((resolve) => window.setTimeout(resolve, 500));
+  }
+
+  return getOneSignalSubscriptionState(OneSignal);
+}
+
 function NotificationControl() {
   const oneSignalEnabled = Boolean(import.meta.env.VITE_ONESIGNAL_APP_ID);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -141,17 +153,12 @@ function NotificationControl() {
         }
 
         await withTimeout(
-          OneSignal.Notifications.requestPermission(),
-          15000,
-          'Notification permission request timed out'
-        );
-        await withTimeout(
           Promise.resolve(OneSignal.User.PushSubscription.optIn()),
           15000,
           'OneSignal subscription timed out'
         );
 
-        const state = getOneSignalSubscriptionState(OneSignal);
+        const state = await waitForOneSignalSubscription(OneSignal);
         setPermission(state.hasPermission ? 'granted' : window.Notification.permission);
         setIsSubscribed(state.isSubscribed);
         setStatusMessage(state.isSubscribed ? '푸시 구독이 등록되었습니다.' : '권한은 허용됐지만 구독 토큰이 아직 없습니다.');
@@ -162,7 +169,8 @@ function NotificationControl() {
         });
       } catch (error) {
         console.warn('[notifications] OneSignal subscription failed', error);
-        setStatusMessage('알림 설정 실패: 새로고침 후 다시 시도하세요.');
+        const message = error?.message ? `알림 설정 실패: ${error.message}` : '알림 설정 실패: 새로고침 후 다시 시도하세요.';
+        setStatusMessage(message);
       } finally {
         setIsProcessing(false);
       }
