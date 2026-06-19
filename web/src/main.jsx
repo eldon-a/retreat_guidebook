@@ -28,7 +28,7 @@ const initPushNotifications = () => {
       try {
         await OneSignal.init({
           appId: oneSignalAppId,
-          serviceWorkerPath: 'service-worker.js',
+          serviceWorkerPath: 'OneSignalSDKWorker.js',
           serviceWorkerParam: { scope: '/' },
         });
         window.clearTimeout(timeoutId);

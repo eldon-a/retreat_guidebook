@@ -88,7 +88,7 @@ Apps Script 코드는 [apps-script/Code.gs](/Users/hkim/Project/yangwoo_tool/yan
 
 ```text
 Path to service worker files: /
-Service worker filename: service-worker.js
+Service worker filename: OneSignalSDKWorker.js
 Service worker registration scope: /
 ```
 
