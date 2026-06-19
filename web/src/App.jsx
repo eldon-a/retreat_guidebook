@@ -37,14 +37,54 @@ async function getReadyServiceWorker() {
 }
 
 function NotificationControl() {
+  const oneSignalEnabled = Boolean(import.meta.env.VITE_ONESIGNAL_APP_ID);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [permission, setPermission] = useState(() => {
     if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
     return window.Notification.permission;
   });
 
+  useEffect(() => {
+    if (!oneSignalEnabled || typeof window === 'undefined') return;
+
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push((OneSignal) => {
+      if (!OneSignal.Notifications.isPushSupported()) {
+        setPermission('unsupported');
+        return;
+      }
+
+      setPermission(OneSignal.Notifications.permission ? 'granted' : window.Notification.permission);
+      OneSignal.Notifications.addEventListener('permissionChange', (granted) => {
+        setPermission(granted ? 'granted' : window.Notification.permission);
+      });
+    });
+  }, [oneSignalEnabled]);
+
   async function requestPermission() {
     if (!('Notification' in window)) {
       setPermission('unsupported');
+      return;
+    }
+
+    if (oneSignalEnabled && window.OneSignalDeferred) {
+      setIsProcessing(true);
+      window.OneSignalDeferred.push(async (OneSignal) => {
+        try {
+          if (!OneSignal.Notifications.isPushSupported()) {
+            setPermission('unsupported');
+            return;
+          }
+
+          await OneSignal.Notifications.requestPermission();
+          await OneSignal.User.PushSubscription.optIn();
+          setPermission(OneSignal.Notifications.permission ? 'granted' : window.Notification.permission);
+        } catch (error) {
+          console.warn('[notifications] OneSignal subscription failed', error);
+        } finally {
+          setIsProcessing(false);
+        }
+      });
       return;
     }
 
@@ -77,14 +117,20 @@ function NotificationControl() {
     unsupported: '알림 미지원',
   }[permission] || '알림 받기';
 
+  const disabled =
+    isProcessing ||
+    permission === 'denied' ||
+    permission === 'unsupported' ||
+    (!oneSignalEnabled && permission === 'granted');
+
   return (
     <button
       className="notify-button"
       type="button"
       onClick={requestPermission}
-      disabled={permission === 'granted' || permission === 'denied' || permission === 'unsupported'}
+      disabled={disabled}
     >
-      {label}
+      {isProcessing ? '알림 설정 중' : label}
     </button>
   );
 }

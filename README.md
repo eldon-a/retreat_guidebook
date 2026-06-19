@@ -14,7 +14,7 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
   - 이름 입력 시 같은 이름의 모든 결과를 `방번호 : 이름 / 소속 / 직책` 형식으로 출력
 - 주요 연락처 조회: 운영, 안전, 이동 연락처와 전화 연결
 - 긴급공지: 상단 고정 긴급 배너와 공지 목록
-- 알림 받기: 브라우저 알림 권한 요청 및 테스트 알림
+- 알림 받기: OneSignal 웹 푸시 연동 준비
 - PWA 기본 구성: manifest, 아이콘, service worker 포함
 
 ## Google Sheet 구조
@@ -71,11 +71,36 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
 ```env
 VITE_GOOGLE_SHEET_ID=1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5XPs
 VITE_GUIDEBOOK_API_URL=
+VITE_ONESIGNAL_APP_ID=
 ```
 
 나중에 Apps Script API를 배포하면 `VITE_GUIDEBOOK_API_URL`에 배포 URL을 넣으면 됩니다. 이 값이 있으면 앱은 Apps Script API를 우선 사용하고, 없으면 Google Sheet CSV를 직접 읽습니다.
 
 Apps Script 코드는 [apps-script/Code.gs](/Users/hkim/Project/yangwoo_tool/yangwoo_tool/retreat_guidebook/apps-script/Code.gs)에 있습니다.
+
+## 푸시 알림 설정
+
+푸시 알림은 OneSignal 웹 푸시를 사용하도록 준비되어 있습니다. 무료 플랜 기준으로 300명 규모 행사에는 충분합니다.
+
+1. OneSignal에서 새 앱을 만들고 Web Push 플랫폼을 추가합니다.
+2. Site URL에는 Cloudflare 배포 주소를 정확히 입력합니다. 예: `https://retreat-guidebook.<계정>.workers.dev`
+3. Web 설정에서 service worker 경로를 아래처럼 지정합니다.
+
+```text
+Path to service worker files: /push/onesignal/
+Service worker filename: OneSignalSDKWorker.js
+Service worker registration scope: /push/onesignal/
+```
+
+4. OneSignal의 App ID를 Cloudflare `Variables and secrets`에 추가합니다.
+
+```env
+VITE_ONESIGNAL_APP_ID=OneSignal에서 발급된 App ID
+```
+
+5. Cloudflare에서 다시 배포합니다.
+
+관리자는 OneSignal 대시보드의 Messages 또는 New Push 메뉴에서 긴급공지를 작성해 전체 구독자에게 보낼 수 있습니다. 참가자는 배포된 웹앱에 접속해 브라우저 알림 권한을 허용해야 푸시를 받을 수 있습니다.
 
 ## 실행
 
