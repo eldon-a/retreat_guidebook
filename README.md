@@ -84,12 +84,12 @@ Apps Script 코드는 [apps-script/Code.gs](/Users/hkim/Project/yangwoo_tool/yan
 
 1. OneSignal에서 새 앱을 만들고 Web Push 플랫폼을 추가합니다.
 2. Site URL에는 Cloudflare 배포 주소를 정확히 입력합니다. 예: `https://retreat-guidebook.<계정>.workers.dev`
-3. Web 설정에서 service worker 경로를 아래처럼 지정합니다.
+3. Web 설정에서 service worker 경로를 아래처럼 지정합니다. 화면에서 이 항목을 찾지 못해도 앱 코드가 같은 값을 직접 지정합니다.
 
 ```text
-Path to service worker files: /push/onesignal/
-Service worker filename: OneSignalSDKWorker.js
-Service worker registration scope: /push/onesignal/
+Path to service worker files: /
+Service worker filename: service-worker.js
+Service worker registration scope: /
 ```
 
 4. OneSignal의 App ID를 Cloudflare `Variables and secrets`에 추가합니다.

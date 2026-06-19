@@ -1,3 +1,5 @@
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
 const CACHE_NAME = 'retreat-guidebook-v1';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg'];
 

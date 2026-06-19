@@ -28,8 +28,8 @@ const initPushNotifications = () => {
       try {
         await OneSignal.init({
           appId: oneSignalAppId,
-          serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js',
-          serviceWorkerParam: { scope: '/push/onesignal/' },
+          serviceWorkerPath: 'service-worker.js',
+          serviceWorkerParam: { scope: '/' },
         });
         window.clearTimeout(timeoutId);
         window.__oneSignal = OneSignal;
