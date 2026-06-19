@@ -39,6 +39,7 @@ async function getReadyServiceWorker() {
 function NotificationControl() {
   const oneSignalEnabled = Boolean(import.meta.env.VITE_ONESIGNAL_APP_ID);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [permission, setPermission] = useState(() => {
     if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
     return window.Notification.permission;
@@ -47,6 +48,24 @@ function NotificationControl() {
   useEffect(() => {
     if (!oneSignalEnabled || typeof window === 'undefined') return;
 
+    function syncSubscriptionState(OneSignal) {
+      const hasPermission = OneSignal.Notifications.permission;
+      const optedIn = OneSignal.User.PushSubscription.optedIn;
+      const subscriptionId = OneSignal.User.PushSubscription.id;
+      const token = OneSignal.User.PushSubscription.token;
+
+      setPermission(hasPermission ? 'granted' : window.Notification.permission);
+      setIsSubscribed(Boolean(hasPermission && optedIn && subscriptionId && token));
+
+      if (subscriptionId || token) {
+        console.info('[notifications] OneSignal subscription', {
+          subscriptionId,
+          hasToken: Boolean(token),
+          optedIn,
+        });
+      }
+    }
+
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push((OneSignal) => {
       if (!OneSignal.Notifications.isPushSupported()) {
@@ -54,9 +73,13 @@ function NotificationControl() {
         return;
       }
 
-      setPermission(OneSignal.Notifications.permission ? 'granted' : window.Notification.permission);
+      syncSubscriptionState(OneSignal);
       OneSignal.Notifications.addEventListener('permissionChange', (granted) => {
         setPermission(granted ? 'granted' : window.Notification.permission);
+        syncSubscriptionState(OneSignal);
+      });
+      OneSignal.User.PushSubscription.addEventListener('change', () => {
+        syncSubscriptionState(OneSignal);
       });
     });
   }, [oneSignalEnabled]);
@@ -79,6 +102,19 @@ function NotificationControl() {
           await OneSignal.Notifications.requestPermission();
           await OneSignal.User.PushSubscription.optIn();
           setPermission(OneSignal.Notifications.permission ? 'granted' : window.Notification.permission);
+          setIsSubscribed(
+            Boolean(
+              OneSignal.Notifications.permission &&
+                OneSignal.User.PushSubscription.optedIn &&
+                OneSignal.User.PushSubscription.id &&
+                OneSignal.User.PushSubscription.token
+            )
+          );
+          console.info('[notifications] OneSignal subscription', {
+            subscriptionId: OneSignal.User.PushSubscription.id,
+            hasToken: Boolean(OneSignal.User.PushSubscription.token),
+            optedIn: OneSignal.User.PushSubscription.optedIn,
+          });
         } catch (error) {
           console.warn('[notifications] OneSignal subscription failed', error);
         } finally {
@@ -110,15 +146,18 @@ function NotificationControl() {
     }
   }
 
-  const label = {
-    default: '알림 받기',
-    granted: '알림 허용됨',
-    denied: '알림 차단됨',
-    unsupported: '알림 미지원',
-  }[permission] || '알림 받기';
+  const label = isSubscribed
+    ? '알림 등록됨'
+    : {
+        default: '알림 받기',
+        granted: oneSignalEnabled ? '알림 등록하기' : '알림 허용됨',
+        denied: '알림 차단됨',
+        unsupported: '알림 미지원',
+      }[permission] || '알림 받기';
 
   const disabled =
     isProcessing ||
+    isSubscribed ||
     permission === 'denied' ||
     permission === 'unsupported' ||
     (!oneSignalEnabled && permission === 'granted');
