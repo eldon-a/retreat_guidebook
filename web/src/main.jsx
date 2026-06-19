@@ -17,18 +17,40 @@ const initPushNotifications = () => {
   }
 
   window.OneSignalDeferred = window.OneSignalDeferred || [];
+  let rejectInit;
+  window.__oneSignalInitPromise = new Promise((resolve, reject) => {
+    rejectInit = reject;
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error('OneSignal SDK initialization timed out'));
+    }, 12000);
+
+    window.OneSignalDeferred.push(async (OneSignal) => {
+      try {
+        await OneSignal.init({
+          appId: oneSignalAppId,
+          serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js',
+          serviceWorkerParam: { scope: '/push/onesignal/' },
+        });
+        window.clearTimeout(timeoutId);
+        window.__oneSignal = OneSignal;
+        resolve(OneSignal);
+      } catch (error) {
+        window.clearTimeout(timeoutId);
+        window.__oneSignalInitError = error;
+        reject(error);
+      }
+    });
+  });
+
   const script = document.createElement('script');
   script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
   script.defer = true;
+  script.onerror = () => {
+    const error = new Error('OneSignal SDK script failed to load');
+    window.__oneSignalInitError = error;
+    rejectInit(error);
+  };
   document.head.appendChild(script);
-
-  window.OneSignalDeferred.push(async (OneSignal) => {
-    await OneSignal.init({
-      appId: oneSignalAppId,
-      serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js',
-      serviceWorkerParam: { scope: '/push/onesignal/' },
-    });
-  });
 };
 
 initPushNotifications();

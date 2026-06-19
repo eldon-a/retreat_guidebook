@@ -36,10 +36,47 @@ async function getReadyServiceWorker() {
   ]);
 }
 
+function withTimeout(promise, timeoutMs, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    }),
+  ]);
+}
+
+async function getOneSignalClient() {
+  if (typeof window === 'undefined' || !window.__oneSignalInitPromise) {
+    throw new Error('OneSignal SDK is not configured');
+  }
+
+  return withTimeout(
+    window.__oneSignalInitPromise,
+    12000,
+    'OneSignal SDK initialization timed out'
+  );
+}
+
+function getOneSignalSubscriptionState(OneSignal) {
+  const hasPermission = OneSignal.Notifications.permission;
+  const optedIn = OneSignal.User.PushSubscription.optedIn;
+  const subscriptionId = OneSignal.User.PushSubscription.id;
+  const token = OneSignal.User.PushSubscription.token;
+
+  return {
+    hasPermission,
+    optedIn,
+    subscriptionId,
+    token,
+    isSubscribed: Boolean(hasPermission && optedIn && subscriptionId && token),
+  };
+}
+
 function NotificationControl() {
   const oneSignalEnabled = Boolean(import.meta.env.VITE_ONESIGNAL_APP_ID);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
   const [permission, setPermission] = useState(() => {
     if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
     return window.Notification.permission;
@@ -49,25 +86,22 @@ function NotificationControl() {
     if (!oneSignalEnabled || typeof window === 'undefined') return;
 
     function syncSubscriptionState(OneSignal) {
-      const hasPermission = OneSignal.Notifications.permission;
-      const optedIn = OneSignal.User.PushSubscription.optedIn;
-      const subscriptionId = OneSignal.User.PushSubscription.id;
-      const token = OneSignal.User.PushSubscription.token;
+      const state = getOneSignalSubscriptionState(OneSignal);
 
-      setPermission(hasPermission ? 'granted' : window.Notification.permission);
-      setIsSubscribed(Boolean(hasPermission && optedIn && subscriptionId && token));
+      setPermission(state.hasPermission ? 'granted' : window.Notification.permission);
+      setIsSubscribed(state.isSubscribed);
+      setStatusMessage(state.isSubscribed ? '푸시 구독이 등록되었습니다.' : '');
 
-      if (subscriptionId || token) {
+      if (state.subscriptionId || state.token) {
         console.info('[notifications] OneSignal subscription', {
-          subscriptionId,
-          hasToken: Boolean(token),
-          optedIn,
+          subscriptionId: state.subscriptionId,
+          hasToken: Boolean(state.token),
+          optedIn: state.optedIn,
         });
       }
     }
 
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push((OneSignal) => {
+    getOneSignalClient().then((OneSignal) => {
       if (!OneSignal.Notifications.isPushSupported()) {
         setPermission('unsupported');
         return;
@@ -81,6 +115,9 @@ function NotificationControl() {
       OneSignal.User.PushSubscription.addEventListener('change', () => {
         syncSubscriptionState(OneSignal);
       });
+    }).catch((error) => {
+      console.warn('[notifications] OneSignal initialization failed', error);
+      setStatusMessage('알림 설정을 불러오지 못했습니다.');
     });
   }, [oneSignalEnabled]);
 
@@ -90,37 +127,45 @@ function NotificationControl() {
       return;
     }
 
-    if (oneSignalEnabled && window.OneSignalDeferred) {
+    if (oneSignalEnabled) {
       setIsProcessing(true);
-      window.OneSignalDeferred.push(async (OneSignal) => {
-        try {
-          if (!OneSignal.Notifications.isPushSupported()) {
-            setPermission('unsupported');
-            return;
-          }
+      setStatusMessage('');
 
-          await OneSignal.Notifications.requestPermission();
-          await OneSignal.User.PushSubscription.optIn();
-          setPermission(OneSignal.Notifications.permission ? 'granted' : window.Notification.permission);
-          setIsSubscribed(
-            Boolean(
-              OneSignal.Notifications.permission &&
-                OneSignal.User.PushSubscription.optedIn &&
-                OneSignal.User.PushSubscription.id &&
-                OneSignal.User.PushSubscription.token
-            )
-          );
-          console.info('[notifications] OneSignal subscription', {
-            subscriptionId: OneSignal.User.PushSubscription.id,
-            hasToken: Boolean(OneSignal.User.PushSubscription.token),
-            optedIn: OneSignal.User.PushSubscription.optedIn,
-          });
-        } catch (error) {
-          console.warn('[notifications] OneSignal subscription failed', error);
-        } finally {
-          setIsProcessing(false);
+      try {
+        const OneSignal = await getOneSignalClient();
+
+        if (!OneSignal.Notifications.isPushSupported()) {
+          setPermission('unsupported');
+          setStatusMessage('이 기기는 웹 푸시를 지원하지 않습니다.');
+          return;
         }
-      });
+
+        await withTimeout(
+          OneSignal.Notifications.requestPermission(),
+          15000,
+          'Notification permission request timed out'
+        );
+        await withTimeout(
+          Promise.resolve(OneSignal.User.PushSubscription.optIn()),
+          15000,
+          'OneSignal subscription timed out'
+        );
+
+        const state = getOneSignalSubscriptionState(OneSignal);
+        setPermission(state.hasPermission ? 'granted' : window.Notification.permission);
+        setIsSubscribed(state.isSubscribed);
+        setStatusMessage(state.isSubscribed ? '푸시 구독이 등록되었습니다.' : '권한은 허용됐지만 구독 토큰이 아직 없습니다.');
+        console.info('[notifications] OneSignal subscription', {
+          subscriptionId: state.subscriptionId,
+          hasToken: Boolean(state.token),
+          optedIn: state.optedIn,
+        });
+      } catch (error) {
+        console.warn('[notifications] OneSignal subscription failed', error);
+        setStatusMessage('알림 설정 실패: 새로고침 후 다시 시도하세요.');
+      } finally {
+        setIsProcessing(false);
+      }
       return;
     }
 
@@ -163,14 +208,17 @@ function NotificationControl() {
     (!oneSignalEnabled && permission === 'granted');
 
   return (
-    <button
-      className="notify-button"
-      type="button"
-      onClick={requestPermission}
-      disabled={disabled}
-    >
-      {isProcessing ? '알림 설정 중' : label}
-    </button>
+    <div className="notification-control">
+      <button
+        className="notify-button"
+        type="button"
+        onClick={requestPermission}
+        disabled={disabled}
+      >
+        {isProcessing ? '알림 설정 중' : label}
+      </button>
+      {statusMessage && <span className="notify-status">{statusMessage}</span>}
+    </div>
   );
 }
 

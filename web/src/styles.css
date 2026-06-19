@@ -89,6 +89,21 @@ button {
   font-weight: 700;
 }
 
+.notification-control {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.notify-status {
+  max-width: 220px;
+  color: var(--workshop-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: right;
+}
+
 .notify-button:disabled {
   background: #dbe3de;
   color: #52605a;
@@ -616,6 +631,15 @@ button {
 
   .notify-button {
     width: 100%;
+  }
+
+  .notification-control {
+    align-items: stretch;
+  }
+
+  .notify-status {
+    max-width: none;
+    text-align: left;
   }
 
   .urgent-strip {
