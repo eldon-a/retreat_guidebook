@@ -1,5 +1,5 @@
 export const eventInfo = {
-  title: '2026 리더십 워크샵 안내',
+  title: '2026 리더십 수련회 안내',
   date: '2026.07.10 금 - 07.12 일',
   duration: '2박 3일',
   venue: '양평 포레스트 리트릿',
@@ -26,7 +26,7 @@ export const scheduleDays = [
     date: '7.11 토',
     sessions: [
       { time: '07:30', title: '아침 식사', place: '다이닝홀', type: 'meal', note: '식사는 09:00에 마감됩니다.' },
-      { time: '09:30', title: '전략 워크샵', place: '그랜드홀', type: 'main', note: '부서별 사전 과제를 지참합니다.' },
+      { time: '09:30', title: '전략 수련회', place: '그랜드홀', type: 'main', note: '부서별 사전 과제를 지참합니다.' },
       { time: '12:00', title: '점심 식사', place: '다이닝홀', type: 'meal', note: '좌석은 자유석입니다.' },
       { time: '14:00', title: '분임 토의', place: '세미나룸 1-6', type: 'activity', note: '조별 배정 회의실로 이동합니다.' },
       { time: '17:30', title: '발표 리허설', place: '그랜드홀', type: 'main', note: '발표 자료는 17:00까지 제출합니다.' },

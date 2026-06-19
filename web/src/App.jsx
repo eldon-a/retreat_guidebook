@@ -184,7 +184,7 @@ function NotificationControl() {
       try {
         const registration = await getReadyServiceWorker();
         if (registration) {
-          registration.showNotification('워크샵 긴급공지 알림', {
+          registration.showNotification('수련회 긴급공지 알림', {
             body: '알림 수신이 켜졌습니다.',
             tag: 'workshop-notification-test',
           });
@@ -193,7 +193,7 @@ function NotificationControl() {
       } catch (e) {
         // Fall back to the browser notification constructor below.
       }
-      new window.Notification('워크샵 긴급공지 알림', {
+      new window.Notification('수련회 긴급공지 알림', {
         body: '알림 수신이 켜졌습니다.',
       });
     }

@@ -1,5 +1,5 @@
 /**
- * 워크샵 가이드북 - Google Apps Script JSON API
+ * 수련회 가이드북 - Google Apps Script JSON API
  *
  * Google Sheet 탭:
  * - 기본정보: key, value

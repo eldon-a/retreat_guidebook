@@ -1,6 +1,6 @@
-# 워크샵 안내 앱
+# 수련회 안내 앱
 
-300명 규모의 2박 3일 워크샵 참석자가 공통 QR 링크로 접속해 일정, 방배정, 주요 연락처, 긴급공지를 확인하는 모바일 웹/PWA입니다.
+300명 규모의 2박 3일 수련회 참석자가 공통 QR 링크로 접속해 일정, 방배정, 주요 연락처, 긴급공지를 확인하는 모바일 웹/PWA입니다.
 
 현재 앱은 아래 Google Sheet를 데이터 원본으로 읽습니다.
 
@@ -31,7 +31,7 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
 
 | key | value |
 |---|---|
-| title | 2026 리더십 워크샵 안내 |
+| title | 2026 리더십 수련회 안내 |
 | date | 2026.07.10 금 - 07.12 일 |
 | duration | 2박 3일 |
 | venue | 양평 포레스트 리트릿 |

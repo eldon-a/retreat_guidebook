@@ -1,6 +1,6 @@
 {
-  "name": "워크샵 안내 앱",
-  "short_name": "워크샵",
+  "name": "수련회 안내 앱",
+  "short_name": "수련회",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f5f7f4",
