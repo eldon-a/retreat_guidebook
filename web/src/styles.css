@@ -35,7 +35,8 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -629,43 +630,6 @@ button {
   min-width: 0;
 }
 
-.board-type-tabs {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin-bottom: 12px;
-  padding: 6px;
-  border: 1px solid var(--workshop-line);
-  border-radius: 8px;
-  background: #f8faf8;
-}
-
-.board-type-tabs button {
-  min-width: 0;
-  min-height: 48px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--workshop-muted);
-  font-weight: 800;
-}
-
-.board-type-tabs button span,
-.board-type-tabs button small {
-  display: block;
-}
-
-.board-type-tabs button small {
-  margin-top: 3px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.board-type-tabs button.active {
-  background: var(--workshop-primary);
-  color: #fff;
-}
-
 .post-list,
 .comment-list {
   list-style: none;
@@ -758,7 +722,8 @@ button {
 }
 
 .board-form input,
-.board-form textarea {
+.board-form textarea,
+.board-form select {
   width: 100%;
   min-width: 0;
   border: 1px solid var(--workshop-line);
@@ -770,7 +735,8 @@ button {
   outline: none;
 }
 
-.board-form input {
+.board-form input,
+.board-form select {
   height: 42px;
 }
 
@@ -780,9 +746,21 @@ button {
 }
 
 .board-form input:focus,
-.board-form textarea:focus {
+.board-form textarea:focus,
+.board-form select:focus {
   border-color: var(--workshop-primary);
   box-shadow: 0 0 0 3px rgba(31, 111, 86, 0.13);
+}
+
+.type-select {
+  display: grid;
+  gap: 6px;
+}
+
+.type-select span {
+  color: var(--workshop-text);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .board-form button {
@@ -1070,7 +1048,6 @@ button {
     gap: 4px;
   }
 
-  .board-type-tabs,
   .form-grid {
     grid-template-columns: 1fr 1fr;
   }

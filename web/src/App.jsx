@@ -549,12 +549,11 @@ function AttachmentList({ attachments }) {
 
 function BoardView() {
   const writable = isBoardWritable();
-  const [boardType, setBoardType] = useState('notice');
   const [board, setBoard] = useState(sampleBoardData);
   const [selectedPostId, setSelectedPostId] = useState(sampleBoardData.posts[0]?.id || '');
   const [status, setStatus] = useState({ state: 'loading', message: '게시판 불러오는 중' });
   const [password, setPassword] = useState('');
-  const [postForm, setPostForm] = useState({ author: '', title: '', body: '' });
+  const [postForm, setPostForm] = useState({ boardType: 'notice', author: '', title: '', body: '' });
   const [commentForm, setCommentForm] = useState({ author: '', body: '' });
   const [postAttachmentFile, setPostAttachmentFile] = useState(null);
   const [commentAttachmentFile, setCommentAttachmentFile] = useState(null);
@@ -582,10 +581,7 @@ function BoardView() {
     loadBoard();
   }, []);
 
-  const posts = useMemo(
-    () => board.posts.filter((post) => post.boardType === boardType),
-    [board.posts, boardType]
-  );
+  const posts = board.posts;
   const selectedPost = posts.find((post) => post.id === selectedPostId) || posts[0];
   const commentsByPost = useMemo(() => {
     const map = new Map();
@@ -657,7 +653,7 @@ function BoardView() {
     setStatus({ state: 'loading', message: postAttachmentFile ? '게시글과 첨부파일 저장 중' : '게시글 저장 중' });
     try {
       const data = await createBoardPost({
-        boardType,
+        boardType: postForm.boardType,
         author: postForm.author,
         title: postForm.title,
         body: postForm.body,
@@ -665,10 +661,10 @@ function BoardView() {
         attachmentFile: postAttachmentFile,
       });
       setBoard(data);
-      setPostForm({ author: '', title: '', body: '' });
+      setPostForm((current) => ({ boardType: current.boardType, author: '', title: '', body: '' }));
       setPostAttachmentFile(null);
       setPostFileInputKey((current) => current + 1);
-      setSelectedPostId(data.posts.find((post) => post.boardType === boardType)?.id || '');
+      setSelectedPostId(data.posts[0]?.id || '');
       setStatus({ state: 'ready', message: '게시글을 등록했습니다.' });
     } catch (error) {
       setStatus({ state: 'error', message: error.message || '게시글 저장에 실패했습니다.' });
@@ -729,7 +725,7 @@ function BoardView() {
       <div className="section-heading board-heading">
         <div>
           <h2>게시판</h2>
-          <p>공지, 자유글, 분실물, 질문을 남기고 댓글로 답변합니다.</p>
+          <p>게시글 유형을 선택해 공지, 질문, 분실물, 자유글을 한 목록에서 확인합니다.</p>
         </div>
         <button type="button" className="secondary-button" onClick={loadBoard} disabled={status.state === 'loading'}>
           새로고침
@@ -743,23 +739,6 @@ function BoardView() {
 
       <div className="board-layout">
         <section className="board-panel">
-          <div className="board-type-tabs" role="tablist" aria-label="게시판 종류">
-            {BOARD_TYPES.map((type) => {
-              const count = board.posts.filter((post) => post.boardType === type.id).length;
-              return (
-                <button
-                  key={type.id}
-                  type="button"
-                  className={boardType === type.id ? 'active' : ''}
-                  onClick={() => setBoardType(type.id)}
-                >
-                  <span>{type.label}</span>
-                  <small>{count}</small>
-                </button>
-              );
-            })}
-          </div>
-
           <ul className="post-list">
             {posts.length === 0 && (
               <li className="post-empty">등록된 게시글이 없습니다.</li>
@@ -773,7 +752,9 @@ function BoardView() {
                 >
                   <strong>{post.title}</strong>
                   <span>{post.author} · {post.createdAt}</span>
-                  <small>댓글 {commentsByPost.get(post.id)?.length || 0}</small>
+                  <small>
+                    {BOARD_TYPES.find((type) => type.id === post.boardType)?.label || '게시글'} · 댓글 {commentsByPost.get(post.id)?.length || 0}
+                  </small>
                 </button>
               </li>
             ))}
@@ -796,6 +777,17 @@ function BoardView() {
                 autoComplete="off"
               />
             </div>
+            <label className="type-select">
+              <span>게시글 유형</span>
+              <select
+                value={postForm.boardType}
+                onChange={(event) => setPostForm((current) => ({ ...current, boardType: event.target.value }))}
+              >
+                {BOARD_TYPES.map((type) => (
+                  <option key={type.id} value={type.id}>{type.label}</option>
+                ))}
+              </select>
+            </label>
             <input
               value={postForm.title}
               onChange={(event) => setPostForm((current) => ({ ...current, title: event.target.value }))}

@@ -172,7 +172,7 @@ function createPost(payload) {
 
   const boardType = clean(payload.boardType || payload.board_type || 'free');
   if (CONFIG.BOARD_TYPES.indexOf(boardType) === -1) {
-    throw new Error('게시판 종류가 올바르지 않습니다.');
+    throw new Error('게시글 유형이 올바르지 않습니다.');
   }
 
   const author = limitText(clean(payload.author) || '익명', 20, '작성자');

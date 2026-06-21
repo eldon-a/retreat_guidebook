@@ -25,7 +25,7 @@ const ALLOWED_ATTACHMENT_EXTENSIONS = new Set([
 ]);
 
 export const BOARD_TYPES = [
-  { id: 'notice', label: '공지형' },
+  { id: 'notice', label: '공지' },
   { id: 'free', label: '자유' },
   { id: 'lost', label: '분실물' },
   { id: 'qna', label: '질문' },

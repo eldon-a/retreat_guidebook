@@ -14,7 +14,7 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
   - 이름 입력 시 같은 이름의 모든 결과를 `방번호 : 이름 / 소속 / 직책` 형식으로 출력
 - 주요 연락처 조회: 운영, 안전, 이동 연락처와 전화 연결
 - 긴급공지: 상단 고정 긴급 배너와 공지 목록
-- 게시판: 공지형, 자유, 분실물, 질문 게시판과 댓글 작성, 파일 첨부
+- 게시판: 단일 게시판, 게시글 유형 선택, 댓글 작성, 파일 첨부
 - 게시판 운영: 작성 비밀번호, 금칙어 차단, Google Sheet `status` 기반 숨김 처리
 - 알림 받기: OneSignal 웹 푸시 연동 준비
 - PWA 기본 구성: manifest, 아이콘, service worker 포함
@@ -79,10 +79,10 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
 
 | 값 | 의미 |
 |---|---|
-| notice | 공지형 게시판 |
-| free | 자유게시판 |
-| lost | 분실물 게시판 |
-| qna | 질문 게시판 |
+| notice | 공지 |
+| free | 자유 |
+| lost | 분실물 |
+| qna | 질문 |
 
 `status`가 비어 있거나 `visible`이면 표시됩니다. 관리자가 숨기려면 `status`를 `hidden`으로 바꾸면 됩니다.
 
