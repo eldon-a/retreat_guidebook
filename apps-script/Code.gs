@@ -9,6 +9,7 @@
  * - 공지: notice_id, level, time, title, body, target, pinned, visible, push_status
  * - 게시글: post_id, created_at, board_type, author, title, body, status, hidden_reason
  * - 댓글: comment_id, post_id, created_at, author, body, status, hidden_reason
+ * - 첨부파일: attachment_id, post_id, comment_id, created_at, uploader, file_name, mime_type, size_bytes, drive_file_id, download_url, status, hidden_reason
  */
 
 const CONFIG = {
@@ -22,10 +23,31 @@ const CONFIG = {
     NOTICES: '공지',
     POSTS: '게시글',
     COMMENTS: '댓글',
+    ATTACHMENTS: '첨부파일',
   },
   BOARD_TYPES: ['notice', 'free', 'lost', 'qna'],
   POST_HEADERS: ['post_id', 'created_at', 'board_type', 'author', 'title', 'body', 'status', 'hidden_reason'],
   COMMENT_HEADERS: ['comment_id', 'post_id', 'created_at', 'author', 'body', 'status', 'hidden_reason'],
+  ATTACHMENT_HEADERS: ['attachment_id', 'post_id', 'comment_id', 'created_at', 'uploader', 'file_name', 'mime_type', 'size_bytes', 'drive_file_id', 'download_url', 'status', 'hidden_reason'],
+  MAX_ATTACHMENT_BYTES: 5 * 1024 * 1024,
+  ALLOWED_ATTACHMENT_EXTENSIONS: [
+    'pdf',
+    'doc',
+    'docx',
+    'xls',
+    'xlsx',
+    'ppt',
+    'pptx',
+    'hwp',
+    'hwpx',
+    'png',
+    'jpg',
+    'jpeg',
+    'gif',
+    'webp',
+    'txt',
+    'zip',
+  ],
   BANNED_WORDS: [
     '씨발',
     '시발',
@@ -75,9 +97,10 @@ function handleAction(action, payload) {
 
 function getBoard() {
   ensureBoardSheets();
+  const attachments = getBoardAttachments();
   const comments = getBoardComments();
   const posts = getBoardPosts();
-  return { posts, comments };
+  return { posts, comments, attachments };
 }
 
 function getBoardPosts() {
@@ -119,6 +142,30 @@ function getBoardComments() {
     });
 }
 
+function getBoardAttachments() {
+  return readObjects(CONFIG.SHEETS.ATTACHMENTS)
+    .filter(isBoardItemVisible)
+    .map((row, index) => ({
+      id: clean(row.attachment_id) || 'attachment-' + (index + 1),
+      postId: clean(row.post_id),
+      commentId: clean(row.comment_id),
+      createdAt: clean(row.created_at),
+      uploader: clean(row.uploader) || '익명',
+      fileName: clean(row.file_name),
+      mimeType: clean(row.mime_type),
+      sizeBytes: Number(clean(row.size_bytes)) || 0,
+      driveFileId: clean(row.drive_file_id),
+      downloadUrl: clean(row.download_url),
+      _index: index,
+    }))
+    .filter((attachment) => attachment.fileName && attachment.downloadUrl)
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)) || a._index - b._index)
+    .map((attachment) => {
+      delete attachment._index;
+      return attachment;
+    });
+}
+
 function createPost(payload) {
   ensureBoardSheets();
   validateWritePassword(payload.password);
@@ -134,9 +181,10 @@ function createPost(payload) {
   if (!title || !body) throw new Error('제목과 내용을 입력해 주세요.');
   rejectBannedWords([author, title, body]);
 
+  const postId = makeId('post');
   const sheet = getSpreadsheet().getSheetByName(CONFIG.SHEETS.POSTS);
   sheet.appendRow([
-    makeId('post'),
+    postId,
     formatNow(),
     boardType,
     author,
@@ -145,6 +193,8 @@ function createPost(payload) {
     'visible',
     '',
   ]);
+
+  saveAttachmentIfPresent(payload.attachment, { postId: postId, commentId: '', uploader: author });
 
   return getBoard();
 }
@@ -162,9 +212,10 @@ function createComment(payload) {
   const postExists = getBoardPosts().some((post) => post.id === postId);
   if (!postExists) throw new Error('댓글을 달 게시글을 찾을 수 없습니다.');
 
+  const commentId = makeId('comment');
   const sheet = getSpreadsheet().getSheetByName(CONFIG.SHEETS.COMMENTS);
   sheet.appendRow([
-    makeId('comment'),
+    commentId,
     postId,
     formatNow(),
     author,
@@ -173,7 +224,79 @@ function createComment(payload) {
     '',
   ]);
 
+  saveAttachmentIfPresent(payload.attachment, { postId: postId, commentId: commentId, uploader: author });
+
   return getBoard();
+}
+
+function saveAttachmentIfPresent(attachment, context) {
+  if (!attachment) return;
+
+  ensureBoardSheets();
+
+  const fileName = limitText(clean(attachment.fileName || attachment.file_name), 160, '첨부파일명');
+  const mimeType = clean(attachment.mimeType || attachment.mime_type) || 'application/octet-stream';
+  const sizeBytes = Number(attachment.sizeBytes || attachment.size_bytes) || 0;
+  const base64 = clean(attachment.base64);
+
+  if (!fileName || !base64) {
+    throw new Error('첨부파일 정보가 올바르지 않습니다.');
+  }
+  if (sizeBytes > CONFIG.MAX_ATTACHMENT_BYTES) {
+    throw new Error('첨부파일은 5MB 이하만 업로드할 수 있습니다.');
+  }
+  validateAttachmentExtension(fileName);
+
+  const bytes = Utilities.base64Decode(base64);
+  if (bytes.length > CONFIG.MAX_ATTACHMENT_BYTES) {
+    throw new Error('첨부파일은 5MB 이하만 업로드할 수 있습니다.');
+  }
+
+  const folder = getAttachmentFolder();
+  const file = folder.createFile(Utilities.newBlob(bytes, mimeType, fileName));
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  const driveFileId = file.getId();
+  const downloadUrl = 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(driveFileId);
+  const sheet = getSpreadsheet().getSheetByName(CONFIG.SHEETS.ATTACHMENTS);
+  sheet.appendRow([
+    makeId('attachment'),
+    context.postId || '',
+    context.commentId || '',
+    formatNow(),
+    context.uploader || '익명',
+    fileName,
+    mimeType,
+    String(bytes.length),
+    driveFileId,
+    downloadUrl,
+    'visible',
+    '',
+  ]);
+}
+
+function validateAttachmentExtension(fileName) {
+  const parts = fileName.toLowerCase().split('.');
+  const extension = parts.length > 1 ? parts.pop() : '';
+  if (CONFIG.ALLOWED_ATTACHMENT_EXTENSIONS.indexOf(extension) === -1) {
+    throw new Error('허용되지 않는 첨부파일 형식입니다.');
+  }
+}
+
+function getAttachmentFolder() {
+  const properties = PropertiesService.getScriptProperties();
+  const existingFolderId = clean(properties.getProperty('BOARD_ATTACHMENT_FOLDER_ID'));
+  if (existingFolderId) {
+    try {
+      return DriveApp.getFolderById(existingFolderId);
+    } catch (error) {
+      // Fall through and create a new folder below.
+    }
+  }
+
+  const folder = DriveApp.createFolder('수련회 게시판 첨부파일');
+  properties.setProperty('BOARD_ATTACHMENT_FOLDER_ID', folder.getId());
+  return folder;
 }
 
 function getGuidebook() {
@@ -336,6 +459,7 @@ function getNotices() {
 function ensureBoardSheets() {
   ensureSheet(CONFIG.SHEETS.POSTS, CONFIG.POST_HEADERS);
   ensureSheet(CONFIG.SHEETS.COMMENTS, CONFIG.COMMENT_HEADERS);
+  ensureSheet(CONFIG.SHEETS.ATTACHMENTS, CONFIG.ATTACHMENT_HEADERS);
 }
 
 function ensureSheet(sheetName, headers) {
@@ -442,7 +566,8 @@ function clearGuidebookCache() {
 
 function setupBoardSheets() {
   ensureBoardSheets();
-  SpreadsheetApp.getUi().alert('게시글/댓글 시트를 준비했습니다.');
+  getAttachmentFolder();
+  SpreadsheetApp.getUi().alert('게시글/댓글/첨부파일 시트와 Drive 첨부파일 폴더를 준비했습니다.');
 }
 
 function setBoardWritePassword() {

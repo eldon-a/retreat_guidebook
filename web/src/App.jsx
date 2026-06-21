@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   BOARD_TYPES,
+  MAX_ATTACHMENT_BYTES,
   createBoardComment,
   createBoardPost,
   fetchBoardData,
@@ -8,6 +9,7 @@ import {
   isBoardWritable,
   sampleBoardData,
   sampleGuidebookData,
+  validateAttachmentFile,
 } from './guidebookApi.js';
 
 const tabs = [
@@ -520,6 +522,31 @@ function containsBannedWord(values) {
   return localBannedWords.some((word) => text.includes(word.toLowerCase()));
 }
 
+function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function AttachmentList({ attachments }) {
+  const validAttachments = attachments.filter((attachment) => attachment.downloadUrl);
+  if (!validAttachments.length) return null;
+
+  return (
+    <ul className="attachment-list">
+      {validAttachments.map((attachment) => (
+        <li key={attachment.id}>
+          <a href={attachment.downloadUrl} target="_blank" rel="noreferrer">
+            {attachment.fileName}
+          </a>
+          <span>{formatBytes(attachment.sizeBytes)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function BoardView() {
   const writable = isBoardWritable();
   const [boardType, setBoardType] = useState('notice');
@@ -529,6 +556,10 @@ function BoardView() {
   const [password, setPassword] = useState('');
   const [postForm, setPostForm] = useState({ author: '', title: '', body: '' });
   const [commentForm, setCommentForm] = useState({ author: '', body: '' });
+  const [postAttachmentFile, setPostAttachmentFile] = useState(null);
+  const [commentAttachmentFile, setCommentAttachmentFile] = useState(null);
+  const [postFileInputKey, setPostFileInputKey] = useState(0);
+  const [commentFileInputKey, setCommentFileInputKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
   async function loadBoard() {
@@ -565,7 +596,28 @@ function BoardView() {
     });
     return map;
   }, [board.comments]);
+  const attachmentsByPost = useMemo(() => {
+    const map = new Map();
+    (board.attachments || []).forEach((attachment) => {
+      if (!attachment.postId || attachment.commentId) return;
+      const list = map.get(attachment.postId) || [];
+      list.push(attachment);
+      map.set(attachment.postId, list);
+    });
+    return map;
+  }, [board.attachments]);
+  const attachmentsByComment = useMemo(() => {
+    const map = new Map();
+    (board.attachments || []).forEach((attachment) => {
+      if (!attachment.commentId) return;
+      const list = map.get(attachment.commentId) || [];
+      list.push(attachment);
+      map.set(attachment.commentId, list);
+    });
+    return map;
+  }, [board.attachments]);
   const selectedComments = selectedPost ? commentsByPost.get(selectedPost.id) || [] : [];
+  const selectedPostAttachments = selectedPost ? attachmentsByPost.get(selectedPost.id) || [] : [];
 
   useEffect(() => {
     if (!posts.length) {
@@ -595,9 +647,14 @@ function BoardView() {
       setStatus({ state: 'error', message: '금칙어가 포함되어 있습니다.' });
       return;
     }
+    const attachmentError = validateAttachmentFile(postAttachmentFile);
+    if (attachmentError) {
+      setStatus({ state: 'error', message: attachmentError });
+      return;
+    }
 
     setIsSaving(true);
-    setStatus({ state: 'loading', message: '게시글 저장 중' });
+    setStatus({ state: 'loading', message: postAttachmentFile ? '게시글과 첨부파일 저장 중' : '게시글 저장 중' });
     try {
       const data = await createBoardPost({
         boardType,
@@ -605,9 +662,12 @@ function BoardView() {
         title: postForm.title,
         body: postForm.body,
         password,
+        attachmentFile: postAttachmentFile,
       });
       setBoard(data);
       setPostForm({ author: '', title: '', body: '' });
+      setPostAttachmentFile(null);
+      setPostFileInputKey((current) => current + 1);
       setSelectedPostId(data.posts.find((post) => post.boardType === boardType)?.id || '');
       setStatus({ state: 'ready', message: '게시글을 등록했습니다.' });
     } catch (error) {
@@ -636,18 +696,26 @@ function BoardView() {
       setStatus({ state: 'error', message: '금칙어가 포함되어 있습니다.' });
       return;
     }
+    const attachmentError = validateAttachmentFile(commentAttachmentFile);
+    if (attachmentError) {
+      setStatus({ state: 'error', message: attachmentError });
+      return;
+    }
 
     setIsSaving(true);
-    setStatus({ state: 'loading', message: '댓글 저장 중' });
+    setStatus({ state: 'loading', message: commentAttachmentFile ? '댓글과 첨부파일 저장 중' : '댓글 저장 중' });
     try {
       const data = await createBoardComment({
         postId: selectedPost.id,
         author: commentForm.author,
         body: commentForm.body,
         password,
+        attachmentFile: commentAttachmentFile,
       });
       setBoard(data);
       setCommentForm({ author: '', body: '' });
+      setCommentAttachmentFile(null);
+      setCommentFileInputKey((current) => current + 1);
       setStatus({ state: 'ready', message: '댓글을 등록했습니다.' });
     } catch (error) {
       setStatus({ state: 'error', message: error.message || '댓글 저장에 실패했습니다.' });
@@ -741,6 +809,28 @@ function BoardView() {
               maxLength={1000}
               rows={5}
             />
+            <label className="file-field">
+              <span>첨부파일</span>
+              <input
+                key={postFileInputKey}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.png,.jpg,.jpeg,.gif,.webp,.txt,.zip"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] || null;
+                  const error = validateAttachmentFile(file);
+                  if (error) {
+                    setStatus({ state: 'error', message: error });
+                    setPostAttachmentFile(null);
+                    setPostFileInputKey((current) => current + 1);
+                    return;
+                  }
+                  setPostAttachmentFile(file);
+                }}
+              />
+              <small>
+                {postAttachmentFile ? `${postAttachmentFile.name} · ${formatBytes(postAttachmentFile.size)}` : `선택 사항 · 최대 ${formatBytes(MAX_ATTACHMENT_BYTES)}`}
+              </small>
+            </label>
             <button type="submit" disabled={isSaving || !writable}>
               게시글 등록
             </button>
@@ -759,6 +849,7 @@ function BoardView() {
                 <h3>{selectedPost.title}</h3>
                 <p>{selectedPost.body}</p>
                 <small>{selectedPost.author}</small>
+                <AttachmentList attachments={selectedPostAttachments} />
               </article>
 
               <div className="comments-block">
@@ -772,6 +863,7 @@ function BoardView() {
                         <time>{comment.createdAt}</time>
                       </div>
                       <p>{comment.body}</p>
+                      <AttachmentList attachments={attachmentsByComment.get(comment.id) || []} />
                     </li>
                   ))}
                 </ul>
@@ -800,6 +892,28 @@ function BoardView() {
                     maxLength={500}
                     rows={4}
                   />
+                  <label className="file-field">
+                    <span>첨부파일</span>
+                    <input
+                      key={commentFileInputKey}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.png,.jpg,.jpeg,.gif,.webp,.txt,.zip"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] || null;
+                        const error = validateAttachmentFile(file);
+                        if (error) {
+                          setStatus({ state: 'error', message: error });
+                          setCommentAttachmentFile(null);
+                          setCommentFileInputKey((current) => current + 1);
+                          return;
+                        }
+                        setCommentAttachmentFile(file);
+                      }}
+                    />
+                    <small>
+                      {commentAttachmentFile ? `${commentAttachmentFile.name} · ${formatBytes(commentAttachmentFile.size)}` : `선택 사항 · 최대 ${formatBytes(MAX_ATTACHMENT_BYTES)}`}
+                    </small>
+                  </label>
                   <button type="submit" disabled={isSaving || !writable}>
                     댓글 등록
                   </button>

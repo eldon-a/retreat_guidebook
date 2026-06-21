@@ -14,7 +14,7 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
   - 이름 입력 시 같은 이름의 모든 결과를 `방번호 : 이름 / 소속 / 직책` 형식으로 출력
 - 주요 연락처 조회: 운영, 안전, 이동 연락처와 전화 연결
 - 긴급공지: 상단 고정 긴급 배너와 공지 목록
-- 게시판: 공지형, 자유, 분실물, 질문 게시판과 댓글 작성
+- 게시판: 공지형, 자유, 분실물, 질문 게시판과 댓글 작성, 파일 첨부
 - 게시판 운영: 작성 비밀번호, 금칙어 차단, Google Sheet `status` 기반 숨김 처리
 - 알림 받기: OneSignal 웹 푸시 연동 준비
 - PWA 기본 구성: manifest, 아이콘, service worker 포함
@@ -33,6 +33,7 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
 
 - `게시글`
 - `댓글`
+- `첨부파일`
 
 ### 기본정보
 
@@ -92,6 +93,13 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
 
 댓글도 `status`가 `hidden`이면 앱에서 표시하지 않습니다.
 
+### 첨부파일
+
+| attachment_id | post_id | comment_id | created_at | uploader | file_name | mime_type | size_bytes | drive_file_id | download_url | status | hidden_reason |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+
+첨부파일은 Google Drive의 `수련회 게시판 첨부파일` 폴더에 저장되고, 이 시트에는 다운로드 링크와 파일 정보만 기록됩니다. `status`가 `hidden`이면 앱에서 표시하지 않습니다.
+
 ## 데이터 연동 방식
 
 기본값은 공개 Google Sheet CSV 조회입니다.
@@ -125,10 +133,17 @@ VITE_GUIDEBOOK_API_URL=https://script.google.com/macros/s/배포ID/exec
 
 참석자가 글이나 댓글을 작성할 때는 이 작성 비밀번호를 입력해야 합니다. 금칙어는 Apps Script의 `CONFIG.BANNED_WORDS` 배열에서 조정할 수 있습니다.
 
+첨부파일 정책:
+
+- 글 또는 댓글 1개당 첨부파일 1개
+- 최대 파일 크기 5MB
+- 허용 확장자: `pdf`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, `hwp`, `hwpx`, `png`, `jpg`, `jpeg`, `gif`, `webp`, `txt`, `zip`
+- 업로드된 Drive 파일은 `링크가 있는 모든 사용자 보기` 권한으로 설정됩니다.
+
 관리자 숨김 처리는 Google Sheet에서 직접 처리합니다.
 
 ```text
-게시글 또는 댓글 탭
+게시글, 댓글, 첨부파일 탭
 → 숨길 행의 status 값을 hidden으로 변경
 → 앱에서 게시판 새로고침
 ```

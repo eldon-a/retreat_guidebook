@@ -4,6 +4,25 @@ const GUIDEBOOK_API_URL = (import.meta.env.VITE_GUIDEBOOK_API_URL || '').trim();
 const GOOGLE_SHEET_ID = (import.meta.env.VITE_GOOGLE_SHEET_ID || '').trim();
 const CACHE_KEY = 'retreatGuidebook.data.v1';
 const CACHE_TTL_MS = 60 * 1000;
+export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_EXTENSIONS = new Set([
+  'pdf',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+  'hwp',
+  'hwpx',
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'txt',
+  'zip',
+]);
 
 export const BOARD_TYPES = [
   { id: 'notice', label: '공지형' },
@@ -22,6 +41,47 @@ const SHEET_NAMES = {
 
 function normalize(value) {
   return String(value ?? '').trim();
+}
+
+function fileExtension(fileName) {
+  const parts = normalize(fileName).toLowerCase().split('.');
+  return parts.length > 1 ? parts.pop() : '';
+}
+
+export function validateAttachmentFile(file) {
+  if (!file) return null;
+
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    return '첨부파일은 5MB 이하만 업로드할 수 있습니다.';
+  }
+
+  const extension = fileExtension(file.name);
+  if (!ALLOWED_ATTACHMENT_EXTENSIONS.has(extension)) {
+    return '허용되지 않는 파일 형식입니다.';
+  }
+
+  return null;
+}
+
+async function fileToAttachmentPayload(file) {
+  if (!file) return null;
+
+  const validationError = validateAttachmentFile(file);
+  if (validationError) throw new Error(validationError);
+
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('첨부파일을 읽지 못했습니다.'));
+    reader.readAsDataURL(file);
+  });
+
+  return {
+    fileName: file.name,
+    mimeType: file.type || 'application/octet-stream',
+    sizeBytes: file.size,
+    base64: dataUrl.split(',')[1] || '',
+  };
 }
 
 function isVisible(row) {
@@ -308,6 +368,20 @@ function normalizeNotices(rows) {
 }
 
 function normalizeBoardData(raw) {
+  const attachments = Array.isArray(raw.attachments)
+    ? raw.attachments.map((attachment, index) => ({
+        id: normalize(attachment.id || attachment.attachment_id) || `attachment-${index + 1}`,
+        postId: normalize(attachment.postId || attachment.post_id),
+        commentId: normalize(attachment.commentId || attachment.comment_id),
+        createdAt: normalize(attachment.createdAt || attachment.created_at),
+        uploader: normalize(attachment.uploader) || '익명',
+        fileName: normalize(attachment.fileName || attachment.file_name),
+        mimeType: normalize(attachment.mimeType || attachment.mime_type),
+        sizeBytes: Number(attachment.sizeBytes || attachment.size_bytes) || 0,
+        downloadUrl: normalize(attachment.downloadUrl || attachment.download_url),
+      })).filter((attachment) => attachment.fileName && attachment.downloadUrl)
+    : sampleBoardData.attachments;
+
   const comments = Array.isArray(raw.comments)
     ? raw.comments.map((comment, index) => ({
         id: normalize(comment.id || comment.comment_id) || `comment-${index + 1}`,
@@ -332,6 +406,7 @@ function normalizeBoardData(raw) {
   return {
     posts,
     comments,
+    attachments,
   };
 }
 
@@ -411,7 +486,8 @@ export async function fetchBoardData() {
   return { source: 'sample', data: sampleBoardData };
 }
 
-export async function createBoardPost({ boardType, author, title, body, password }) {
+export async function createBoardPost({ boardType, author, title, body, password, attachmentFile }) {
+  const attachment = await fileToAttachmentPayload(attachmentFile);
   const result = await postToAppsScript({
     action: 'createPost',
     boardType,
@@ -419,17 +495,20 @@ export async function createBoardPost({ boardType, author, title, body, password
     title,
     body,
     password,
+    attachment,
   });
   return normalizeBoardData(result.data || sampleBoardData);
 }
 
-export async function createBoardComment({ postId, author, body, password }) {
+export async function createBoardComment({ postId, author, body, password, attachmentFile }) {
+  const attachment = await fileToAttachmentPayload(attachmentFile);
   const result = await postToAppsScript({
     action: 'createComment',
     postId,
     author,
     body,
     password,
+    attachment,
   });
   return normalizeBoardData(result.data || sampleBoardData);
 }

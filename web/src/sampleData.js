@@ -187,9 +187,24 @@ export const boardComments = [
   },
 ];
 
+export const boardAttachments = [
+  {
+    id: 'attachment-sample-1',
+    postId: 'post-sample-1',
+    commentId: '',
+    createdAt: '2026.07.10 14:21',
+    uploader: '운영본부',
+    fileName: '발표자료_제출_안내.pdf',
+    mimeType: 'application/pdf',
+    sizeBytes: 245760,
+    downloadUrl: '',
+  },
+];
+
 export const sampleBoardData = {
   posts: boardPosts,
   comments: boardComments,
+  attachments: boardAttachments,
 };
 
 export const sampleGuidebookData = {

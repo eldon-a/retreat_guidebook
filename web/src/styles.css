@@ -800,6 +800,39 @@ button {
   cursor: default;
 }
 
+.file-field {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px dashed #b9c7bf;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.file-field span {
+  color: var(--workshop-text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.file-field input {
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: 13px;
+}
+
+.file-field input:focus {
+  box-shadow: none;
+}
+
+.file-field small {
+  color: var(--workshop-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .post-card {
   padding: 16px;
   border: 1px solid var(--workshop-line);
@@ -880,6 +913,42 @@ button {
   color: #37413c;
   line-height: 1.45;
   white-space: pre-wrap;
+}
+
+.attachment-list {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attachment-list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 10px;
+  border: 1px solid var(--workshop-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.attachment-list a {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--workshop-primary-strong);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-list span {
+  color: var(--workshop-muted);
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .comment-form {
