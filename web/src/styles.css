@@ -34,7 +34,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -152,7 +153,7 @@ button {
   top: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 6px;
   padding: 8px;
   margin: 0 0 18px;
@@ -219,6 +220,18 @@ button {
   background: #fff;
   color: var(--workshop-text);
   font-size: 12px;
+  font-weight: 800;
+}
+
+.secondary-button {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--workshop-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--workshop-text);
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -601,6 +614,278 @@ button {
   color: var(--workshop-muted);
 }
 
+.board-heading {
+  align-items: flex-start;
+}
+
+.board-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
+  gap: 14px;
+}
+
+.board-panel,
+.post-detail {
+  min-width: 0;
+}
+
+.board-type-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 6px;
+  border: 1px solid var(--workshop-line);
+  border-radius: 8px;
+  background: #f8faf8;
+}
+
+.board-type-tabs button {
+  min-width: 0;
+  min-height: 48px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--workshop-muted);
+  font-weight: 800;
+}
+
+.board-type-tabs button span,
+.board-type-tabs button small {
+  display: block;
+}
+
+.board-type-tabs button small {
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.board-type-tabs button.active {
+  background: var(--workshop-primary);
+  color: #fff;
+}
+
+.post-list,
+.comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.post-list {
+  max-height: 430px;
+  border: 1px solid var(--workshop-line);
+  border-radius: 8px;
+  background: #fbfcfb;
+  overflow: auto;
+}
+
+.post-list li {
+  border-bottom: 1px solid #edf0ed;
+}
+
+.post-list li:last-child {
+  border-bottom: 0;
+}
+
+.post-list button {
+  width: 100%;
+  min-height: 88px;
+  padding: 13px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--workshop-text);
+  text-align: left;
+}
+
+.post-list button.active {
+  background: var(--workshop-surface-strong);
+}
+
+.post-list strong,
+.post-list span,
+.post-list small {
+  display: block;
+}
+
+.post-list strong {
+  overflow: hidden;
+  color: var(--workshop-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-list span {
+  margin-top: 5px;
+  color: var(--workshop-muted);
+  font-size: 12px;
+}
+
+.post-list small {
+  margin-top: 6px;
+  color: var(--workshop-primary-strong);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.post-empty,
+.comment-empty {
+  padding: 18px;
+  color: var(--workshop-muted);
+  text-align: center;
+}
+
+.board-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--workshop-line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.board-form h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.board-form input,
+.board-form textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--workshop-line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--workshop-text);
+  font-size: 14px;
+  outline: none;
+}
+
+.board-form input {
+  height: 42px;
+}
+
+.board-form textarea {
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.board-form input:focus,
+.board-form textarea:focus {
+  border-color: var(--workshop-primary);
+  box-shadow: 0 0 0 3px rgba(31, 111, 86, 0.13);
+}
+
+.board-form button {
+  height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--workshop-primary);
+  color: #fff;
+  font-weight: 800;
+}
+
+.board-form button:disabled {
+  background: #dbe3de;
+  color: #52605a;
+  cursor: default;
+}
+
+.post-card {
+  padding: 16px;
+  border: 1px solid var(--workshop-line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.post-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--workshop-muted);
+  font-size: 13px;
+}
+
+.post-meta span {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--workshop-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.post-card h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.post-card p {
+  margin: 10px 0 12px;
+  color: #37413c;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.post-card small {
+  color: var(--workshop-muted);
+}
+
+.comments-block {
+  margin-top: 12px;
+}
+
+.comments-block > h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.comment-list {
+  display: grid;
+  gap: 8px;
+}
+
+.comment-list li {
+  padding: 12px;
+  border: 1px solid var(--workshop-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.comment-list li > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--workshop-muted);
+  font-size: 12px;
+}
+
+.comment-list strong {
+  color: var(--workshop-text);
+}
+
+.comment-list p {
+  margin: 7px 0 0;
+  color: #37413c;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.comment-form {
+  margin-top: 12px;
+}
+
 .app-footer {
   display: flex;
   justify-content: center;
@@ -695,6 +980,14 @@ button {
   .contact-grid {
     grid-template-columns: 1fr;
   }
+
+  .board-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .post-list {
+    max-height: none;
+  }
 }
 
 @media (max-width: 420px) {
@@ -706,5 +999,10 @@ button {
   .name-results li {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .board-type-tabs,
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }

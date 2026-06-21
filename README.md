@@ -14,6 +14,8 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
   - 이름 입력 시 같은 이름의 모든 결과를 `방번호 : 이름 / 소속 / 직책` 형식으로 출력
 - 주요 연락처 조회: 운영, 안전, 이동 연락처와 전화 연결
 - 긴급공지: 상단 고정 긴급 배너와 공지 목록
+- 게시판: 공지형, 자유, 분실물, 질문 게시판과 댓글 작성
+- 게시판 운영: 작성 비밀번호, 금칙어 차단, Google Sheet `status` 기반 숨김 처리
 - 알림 받기: OneSignal 웹 푸시 연동 준비
 - PWA 기본 구성: manifest, 아이콘, service worker 포함
 
@@ -26,6 +28,11 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
 - `방배정`
 - `연락처`
 - `공지`
+
+게시판 쓰기 기능을 사용할 때 추가되는 탭:
+
+- `게시글`
+- `댓글`
 
 ### 기본정보
 
@@ -62,6 +69,29 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
 
 `pinned`가 `Y`인 공지는 긴급공지 상단 배너 후보가 됩니다.
 
+### 게시글
+
+| post_id | created_at | board_type | author | title | body | status | hidden_reason |
+|---|---|---|---|---|---|---|---|
+
+`board_type` 값:
+
+| 값 | 의미 |
+|---|---|
+| notice | 공지형 게시판 |
+| free | 자유게시판 |
+| lost | 분실물 게시판 |
+| qna | 질문 게시판 |
+
+`status`가 비어 있거나 `visible`이면 표시됩니다. 관리자가 숨기려면 `status`를 `hidden`으로 바꾸면 됩니다.
+
+### 댓글
+
+| comment_id | post_id | created_at | author | body | status | hidden_reason |
+|---|---|---|---|---|---|---|
+
+댓글도 `status`가 `hidden`이면 앱에서 표시하지 않습니다.
+
 ## 데이터 연동 방식
 
 기본값은 공개 Google Sheet CSV 조회입니다.
@@ -74,9 +104,34 @@ VITE_GUIDEBOOK_API_URL=
 VITE_ONESIGNAL_APP_ID=
 ```
 
-나중에 Apps Script API를 배포하면 `VITE_GUIDEBOOK_API_URL`에 배포 URL을 넣으면 됩니다. 이 값이 있으면 앱은 Apps Script API를 우선 사용하고, 없으면 Google Sheet CSV를 직접 읽습니다.
+Apps Script API를 배포하면 `VITE_GUIDEBOOK_API_URL`에 배포 URL을 넣으면 됩니다. 이 값이 있으면 앱은 Apps Script API를 우선 사용하고, 없으면 Google Sheet CSV를 직접 읽습니다. 게시판 글/댓글 작성은 Google Sheet에 쓰기가 필요하므로 `VITE_GUIDEBOOK_API_URL`이 설정된 상태에서만 사용할 수 있습니다.
 
 Apps Script 코드는 [apps-script/Code.gs](/Users/hkim/Project/yangwoo_tool/yangwoo_tool/retreat_guidebook/apps-script/Code.gs)에 있습니다.
+
+## 게시판 설정
+
+Apps Script 코드를 Google Sheet에 배포한 뒤 시트를 새로고침하면 `가이드북` 메뉴가 생깁니다.
+
+1. `가이드북 > 게시판 시트 만들기` 실행
+2. `가이드북 > 게시판 작성 비밀번호 설정` 실행
+3. Apps Script 웹앱을 새 버전으로 배포
+4. Cloudflare 환경변수에 Apps Script URL 설정
+
+```env
+VITE_GUIDEBOOK_API_URL=https://script.google.com/macros/s/배포ID/exec
+```
+
+5. Cloudflare에서 다시 배포
+
+참석자가 글이나 댓글을 작성할 때는 이 작성 비밀번호를 입력해야 합니다. 금칙어는 Apps Script의 `CONFIG.BANNED_WORDS` 배열에서 조정할 수 있습니다.
+
+관리자 숨김 처리는 Google Sheet에서 직접 처리합니다.
+
+```text
+게시글 또는 댓글 탭
+→ 숨길 행의 status 값을 hidden으로 변경
+→ 앱에서 게시판 새로고침
+```
 
 ## 푸시 알림 설정
 

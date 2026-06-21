@@ -1,9 +1,16 @@
-import { sampleGuidebookData } from './sampleData.js';
+import { sampleBoardData, sampleGuidebookData } from './sampleData.js';
 
 const GUIDEBOOK_API_URL = (import.meta.env.VITE_GUIDEBOOK_API_URL || '').trim();
 const GOOGLE_SHEET_ID = (import.meta.env.VITE_GOOGLE_SHEET_ID || '').trim();
 const CACHE_KEY = 'retreatGuidebook.data.v1';
 const CACHE_TTL_MS = 60 * 1000;
+
+export const BOARD_TYPES = [
+  { id: 'notice', label: '공지형' },
+  { id: 'free', label: '자유' },
+  { id: 'lost', label: '분실물' },
+  { id: 'qna', label: '질문' },
+];
 
 const SHEET_NAMES = {
   basic: '기본정보',
@@ -134,6 +141,28 @@ async function fetchFromAppsScript(apiUrl) {
   }
 
   return data.data;
+}
+
+async function fetchBoardFromAppsScript(apiUrl) {
+  const url = new URL(apiUrl);
+  url.searchParams.set('action', 'getBoard');
+  url.searchParams.set('cacheBust', String(Date.now()));
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    credentials: 'omit',
+  });
+
+  if (!response.ok) {
+    throw new Error(`게시판 API 조회 실패: HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.ok || !data.data) {
+    throw new Error(data.message || '게시판 API 응답이 올바르지 않습니다.');
+  }
+
+  return normalizeBoardData(data.data);
 }
 
 function normalizeGuidebookData(raw) {
@@ -278,6 +307,60 @@ function normalizeNotices(rows) {
   return notices.length ? notices : sampleGuidebookData.notices;
 }
 
+function normalizeBoardData(raw) {
+  const comments = Array.isArray(raw.comments)
+    ? raw.comments.map((comment, index) => ({
+        id: normalize(comment.id || comment.comment_id) || `comment-${index + 1}`,
+        postId: normalize(comment.postId || comment.post_id),
+        createdAt: normalize(comment.createdAt || comment.created_at),
+        author: normalize(comment.author) || '익명',
+        body: normalize(comment.body),
+      })).filter((comment) => comment.postId && comment.body)
+    : sampleBoardData.comments;
+
+  const posts = Array.isArray(raw.posts)
+    ? raw.posts.map((post, index) => ({
+        id: normalize(post.id || post.post_id) || `post-${index + 1}`,
+        boardType: normalize(post.boardType || post.board_type) || 'free',
+        createdAt: normalize(post.createdAt || post.created_at),
+        author: normalize(post.author) || '익명',
+        title: normalize(post.title),
+        body: normalize(post.body),
+      })).filter((post) => post.title && post.body)
+    : sampleBoardData.posts;
+
+  return {
+    posts,
+    comments,
+  };
+}
+
+async function postToAppsScript(payload) {
+  if (!GUIDEBOOK_API_URL) {
+    throw new Error('게시판 작성은 Apps Script API 연동 후 사용할 수 있습니다.');
+  }
+
+  const response = await fetch(GUIDEBOOK_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8',
+    },
+    credentials: 'omit',
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`게시판 저장 실패: HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.ok) {
+    throw new Error(data.message || '게시판 저장에 실패했습니다.');
+  }
+
+  return data;
+}
+
 function readCache() {
   try {
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
@@ -319,4 +402,40 @@ export async function fetchGuidebookData({ force = false } = {}) {
   return { source: 'sample', data: sampleGuidebookData, cached: false };
 }
 
-export { sampleGuidebookData };
+export async function fetchBoardData() {
+  if (GUIDEBOOK_API_URL) {
+    const data = await fetchBoardFromAppsScript(GUIDEBOOK_API_URL);
+    return { source: 'apps-script', data };
+  }
+
+  return { source: 'sample', data: sampleBoardData };
+}
+
+export async function createBoardPost({ boardType, author, title, body, password }) {
+  const result = await postToAppsScript({
+    action: 'createPost',
+    boardType,
+    author,
+    title,
+    body,
+    password,
+  });
+  return normalizeBoardData(result.data || sampleBoardData);
+}
+
+export async function createBoardComment({ postId, author, body, password }) {
+  const result = await postToAppsScript({
+    action: 'createComment',
+    postId,
+    author,
+    body,
+    password,
+  });
+  return normalizeBoardData(result.data || sampleBoardData);
+}
+
+export function isBoardWritable() {
+  return Boolean(GUIDEBOOK_API_URL);
+}
+
+export { sampleBoardData, sampleGuidebookData };

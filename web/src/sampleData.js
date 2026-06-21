@@ -142,6 +142,56 @@ export const notices = [
   },
 ];
 
+export const boardPosts = [
+  {
+    id: 'post-sample-1',
+    boardType: 'notice',
+    createdAt: '2026.07.10 14:20',
+    author: '운영본부',
+    title: '조별 발표 자료 제출 안내',
+    body: '2일차 17:00까지 조별 발표 자료를 운영본부에 전달해 주세요.',
+  },
+  {
+    id: 'post-sample-2',
+    boardType: 'free',
+    createdAt: '2026.07.10 21:05',
+    author: '참석자',
+    title: '세미나룸 B에 보조배터리 두고 가신 분',
+    body: '운영본부에 맡겨두겠습니다.',
+  },
+  {
+    id: 'post-sample-3',
+    boardType: 'lost',
+    createdAt: '2026.07.11 08:40',
+    author: '김참가',
+    title: '검정 우산을 찾습니다',
+    body: '어제 저녁 다이닝홀 입구에 둔 검정 장우산을 찾습니다.',
+  },
+  {
+    id: 'post-sample-4',
+    boardType: 'qna',
+    createdAt: '2026.07.11 10:15',
+    author: '이참가',
+    title: '체크아웃 시간 문의',
+    body: '마지막 날 객실 체크아웃은 몇 시까지인가요?',
+  },
+];
+
+export const boardComments = [
+  {
+    id: 'comment-sample-1',
+    postId: 'post-sample-4',
+    createdAt: '2026.07.11 10:18',
+    author: '운영본부',
+    body: '10:00 전까지 객실 키를 반납해 주세요.',
+  },
+];
+
+export const sampleBoardData = {
+  posts: boardPosts,
+  comments: boardComments,
+};
+
 export const sampleGuidebookData = {
   eventInfo,
   scheduleDays,
