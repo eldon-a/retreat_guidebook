@@ -166,8 +166,7 @@ button {
 
 .tabbar button,
 .segmented button,
-.day-selector button,
-.sample-chips button {
+.day-selector button {
   border: 1px solid transparent;
   border-radius: 7px;
   background: transparent;
@@ -407,21 +406,6 @@ button {
   background: var(--workshop-primary);
   color: #fff;
   font-weight: 800;
-}
-
-.sample-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-bottom: 14px;
-}
-
-.sample-chips button {
-  height: 34px;
-  padding: 0 12px;
-  border-color: var(--workshop-line);
-  background: #fff;
-  font-size: 13px;
 }
 
 .result-panel {

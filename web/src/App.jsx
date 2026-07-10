@@ -351,11 +351,6 @@ function RoomView({ rooms }) {
   const [mode, setMode] = useState('room');
   const [query, setQuery] = useState('');
   const [searched, setSearched] = useState(false);
-  const duplicateName = useMemo(() => {
-    const counts = new Map();
-    roomRows.forEach((row) => counts.set(row.name, (counts.get(row.name) || 0) + 1));
-    return roomRows.find((row) => counts.get(row.name) > 1)?.name || roomRows[0]?.name || '';
-  }, [roomRows]);
 
   const results = useMemo(() => {
     const normalized = mode === 'room' ? normalizeRoom(query) : cleanText(query);
@@ -371,12 +366,6 @@ function RoomView({ rooms }) {
 
   function submitSearch(event) {
     event.preventDefault();
-    setSearched(true);
-  }
-
-  function useSample(value, nextMode) {
-    setMode(nextMode);
-    setQuery(value);
     setSearched(true);
   }
 
@@ -410,12 +399,6 @@ function RoomView({ rooms }) {
         />
         <button type="submit">조회</button>
       </form>
-
-      <div className="sample-chips" aria-label="샘플 검색어">
-        {rooms[0]?.roomNo && <button type="button" onClick={() => useSample(rooms[0].roomNo, 'room')}>{rooms[0].roomNo}</button>}
-        {rooms[1]?.roomNo && <button type="button" onClick={() => useSample(rooms[1].roomNo, 'room')}>{rooms[1].roomNo}</button>}
-        {duplicateName && <button type="button" onClick={() => useSample(duplicateName, 'name')}>{duplicateName}</button>}
-      </div>
 
       <div className="result-panel">
         {!searched && (
