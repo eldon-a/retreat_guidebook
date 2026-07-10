@@ -609,6 +609,8 @@ button {
   margin: 8px 0 10px;
   color: #37413c;
   line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .notice-list small {
