@@ -348,6 +348,7 @@ button {
   color: var(--workshop-muted);
   font-size: 14px;
   line-height: 1.45;
+  white-space: pre-line;
 }
 
 .segmented {
