@@ -4,11 +4,11 @@ import {
   MAX_ATTACHMENT_BYTES,
   createBoardComment,
   createBoardPost,
+  emptyGuidebookData,
   fetchBoardData,
   fetchGuidebookData,
   isBoardWritable,
   sampleBoardData,
-  sampleGuidebookData,
   validateAttachmentFile,
 } from './guidebookApi.js';
 
@@ -347,7 +347,7 @@ function ScheduleView({ scheduleDays }) {
 }
 
 function RoomView({ rooms }) {
-  const roomRows = useMemo(() => buildRoomRows(rooms), []);
+  const roomRows = useMemo(() => buildRoomRows(rooms), [rooms]);
   const [mode, setMode] = useState('room');
   const [query, setQuery] = useState('');
   const [searched, setSearched] = useState(false);
@@ -904,7 +904,7 @@ function BoardView() {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('schedule');
-  const [guidebook, setGuidebook] = useState(sampleGuidebookData);
+  const [guidebook, setGuidebook] = useState(emptyGuidebookData);
   const [dataStatus, setDataStatus] = useState({
     state: 'loading',
     message: 'Google Sheet 연결 중',
@@ -926,10 +926,9 @@ export default function App() {
       });
     } catch (error) {
       console.error('[guidebook] Google Sheet load failed:', error);
-      setGuidebook(sampleGuidebookData);
       setDataStatus({
         state: 'error',
-        message: 'Google Sheet 연결 실패, 샘플 데이터 표시 중',
+        message: 'Google Sheet 연결 실패',
       });
     }
   }

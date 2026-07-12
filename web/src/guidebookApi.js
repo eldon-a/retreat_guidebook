@@ -1,8 +1,8 @@
-import { sampleBoardData, sampleGuidebookData } from './sampleData.js';
+import { emptyGuidebookData, sampleBoardData, sampleGuidebookData } from './sampleData.js';
 
 const GUIDEBOOK_API_URL = (import.meta.env.VITE_GUIDEBOOK_API_URL || '').trim();
 const GOOGLE_SHEET_ID = (import.meta.env.VITE_GOOGLE_SHEET_ID || '').trim();
-const CACHE_KEY = 'retreatGuidebook.data.v1';
+const CACHE_KEY = 'retreatGuidebook.data.v2';
 const CACHE_TTL_MS = 60 * 1000;
 export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_EXTENSIONS = new Set([
@@ -276,8 +276,7 @@ function normalizeSchedule(rows) {
     });
   });
 
-  const scheduleDays = Array.from(dayMap.values());
-  return scheduleDays.length ? scheduleDays : sampleGuidebookData.scheduleDays;
+  return Array.from(dayMap.values());
 }
 
 function normalizeRooms(rows) {
@@ -305,8 +304,7 @@ function normalizeRooms(rows) {
     });
   });
 
-  const rooms = Array.from(roomMap.values());
-  return rooms.length ? rooms : sampleGuidebookData.rooms;
+  return Array.from(roomMap.values());
 }
 
 function normalizeContacts(rows) {
@@ -340,8 +338,7 @@ function normalizeContacts(rows) {
       });
     });
 
-  const contacts = Array.from(contactMap.values());
-  return contacts.length ? contacts : sampleGuidebookData.contacts;
+  return Array.from(contactMap.values());
 }
 
 function normalizeNotices(rows) {
@@ -364,7 +361,7 @@ function normalizeNotices(rows) {
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || a._index - b._index)
     .map(({ _index, ...notice }) => notice);
 
-  return notices.length ? notices : sampleGuidebookData.notices;
+  return notices;
 }
 
 function normalizeBoardData(raw) {
@@ -455,23 +452,32 @@ function writeCache(source, data) {
 }
 
 export async function fetchGuidebookData({ force = false } = {}) {
-  if (!force) {
-    const cached = readCache();
-    if (cached) {
-      return { source: cached.source, data: cached.data, cached: true };
+  if (GUIDEBOOK_API_URL) {
+    try {
+      const data = await fetchFromAppsScript(GUIDEBOOK_API_URL);
+      writeCache('apps-script', data);
+      return { source: 'apps-script', data, cached: false };
+    } catch (error) {
+      if (!force) {
+        const cached = readCache();
+        if (cached) return { source: cached.source, data: cached.data, cached: true };
+      }
+      throw error;
     }
   }
 
-  if (GUIDEBOOK_API_URL) {
-    const data = await fetchFromAppsScript(GUIDEBOOK_API_URL);
-    writeCache('apps-script', data);
-    return { source: 'apps-script', data, cached: false };
-  }
-
   if (GOOGLE_SHEET_ID) {
-    const data = await fetchFromGoogleSheet(GOOGLE_SHEET_ID);
-    writeCache('google-sheet', data);
-    return { source: 'google-sheet', data, cached: false };
+    try {
+      const data = await fetchFromGoogleSheet(GOOGLE_SHEET_ID);
+      writeCache('google-sheet', data);
+      return { source: 'google-sheet', data, cached: false };
+    } catch (error) {
+      if (!force) {
+        const cached = readCache();
+        if (cached) return { source: cached.source, data: cached.data, cached: true };
+      }
+      throw error;
+    }
   }
 
   return { source: 'sample', data: sampleGuidebookData, cached: false };
@@ -517,4 +523,4 @@ export function isBoardWritable() {
   return Boolean(GUIDEBOOK_API_URL);
 }
 
-export { sampleBoardData, sampleGuidebookData };
+export { emptyGuidebookData, sampleBoardData, sampleGuidebookData };

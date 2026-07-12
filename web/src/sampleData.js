@@ -115,32 +115,7 @@ export const contacts = [
   },
 ];
 
-export const notices = [
-  {
-    id: 'notice-urgent-1',
-    level: '긴급',
-    time: '7.11 토 15:20',
-    title: '야외 프로그램 장소 변경',
-    body: '우천 예보로 16:00 팀 활동은 야외 잔디광장에서 그랜드홀로 변경됩니다.',
-    target: '전체 참석자',
-  },
-  {
-    id: 'notice-2',
-    level: '공지',
-    time: '7.11 토 12:40',
-    title: '분임 토의 회의실 안내',
-    body: '1-3조는 세미나룸 1-3, 4-6조는 세미나룸 4-6을 사용합니다.',
-    target: '전체 참석자',
-  },
-  {
-    id: 'notice-3',
-    level: '공지',
-    time: '7.10 금 18:10',
-    title: '저녁 식사 시작',
-    body: '다이닝홀 입장은 18:30부터 가능합니다. 명찰을 착용해 주세요.',
-    target: '전체 참석자',
-  },
-];
+export const notices = [];
 
 export const boardPosts = [
   {
@@ -213,4 +188,19 @@ export const sampleGuidebookData = {
   rooms,
   contacts,
   notices,
+};
+
+export const emptyGuidebookData = {
+  eventInfo: {
+    title: '수련회 안내',
+    date: '',
+    duration: '',
+    venue: '',
+    helpDesk: '',
+    helpDeskHours: '',
+  },
+  scheduleDays: [],
+  rooms: [],
+  contacts: [],
+  notices: [],
 };

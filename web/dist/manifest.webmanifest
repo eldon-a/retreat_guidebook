@@ -1,7 +1,8 @@
 {
   "name": "수련회 안내 앱",
   "short_name": "수련회",
-  "start_url": "/",
+  "id": "/?app=retreat-guidebook-v2",
+  "start_url": "/?app=retreat-guidebook-v2",
   "display": "standalone",
   "background_color": "#f5f7f4",
   "theme_color": "#1f6f56",
