@@ -12,6 +12,7 @@ async function proxyGoogleSheet(requestUrl) {
   const googleUrl = new URL(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`);
   googleUrl.searchParams.set('tqx', 'out:csv');
   googleUrl.searchParams.set('sheet', sheetName);
+  googleUrl.searchParams.set('headers', '1');
 
   try {
     const response = await fetch(googleUrl, {

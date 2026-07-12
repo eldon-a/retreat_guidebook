@@ -40,6 +40,14 @@ const SHEET_NAMES = {
   notices: '공지',
 };
 
+const SHEET_PRIMARY_HEADERS = {
+  [SHEET_NAMES.basic]: 'key',
+  [SHEET_NAMES.schedule]: 'day_id',
+  [SHEET_NAMES.rooms]: 'room_no',
+  [SHEET_NAMES.contacts]: 'category',
+  [SHEET_NAMES.notices]: 'notice_id',
+};
+
 function normalize(value) {
   return String(value ?? '').trim();
 }
@@ -146,6 +154,18 @@ function rowsToObjects(rows) {
   });
 }
 
+function parseCsvSheet(text, sheetName) {
+  const rows = parseCsv(text);
+  const headers = (rows[0] || []).map((header) => normalize(header));
+  const requiredHeader = SHEET_PRIMARY_HEADERS[sheetName];
+
+  if (!requiredHeader || !headers.includes(requiredHeader)) {
+    throw new Error(`${sheetName} 시트 헤더를 확인하지 못했습니다.`);
+  }
+
+  return rowsToObjects(rows);
+}
+
 async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -240,7 +260,7 @@ async function fetchCsvSheet(sheetId, sheetName) {
       proxyResponse.ok &&
       proxyResponse.headers.get('X-Guidebook-Source') === 'google-sheet'
     ) {
-      return rowsToObjects(parseCsv(await proxyResponse.text()));
+      return parseCsvSheet(await proxyResponse.text(), sheetName);
     }
   } catch (error) {
     // Local Vite development has no Worker API, so continue with the direct
@@ -250,6 +270,7 @@ async function fetchCsvSheet(sheetId, sheetName) {
   const url = new URL(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`);
   url.searchParams.set('tqx', 'out:csv');
   url.searchParams.set('sheet', sheetName);
+  url.searchParams.set('headers', '1');
   url.searchParams.set('cacheBust', String(Date.now()));
 
   let response;
@@ -269,7 +290,11 @@ async function fetchCsvSheet(sheetId, sheetName) {
     return fetchGoogleSheetViaJsonp(sheetId, sheetName);
   }
 
-  return rowsToObjects(parseCsv(await response.text()));
+  try {
+    return parseCsvSheet(await response.text(), sheetName);
+  } catch (error) {
+    return fetchGoogleSheetViaJsonp(sheetId, sheetName);
+  }
 }
 
 async function fetchFromGoogleSheet(sheetId) {
