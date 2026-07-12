@@ -928,7 +928,9 @@ export default function App() {
       console.error('[guidebook] Google Sheet load failed:', error);
       setDataStatus({
         state: 'error',
-        message: 'Google Sheet 연결 실패',
+        message: error?.message
+          ? `Google Sheet 연결 실패: ${error.message}`
+          : 'Google Sheet 연결 실패',
       });
     }
   }

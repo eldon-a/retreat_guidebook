@@ -102,7 +102,7 @@ https://docs.google.com/spreadsheets/d/1E1Im2a8NGb9JFuD5mvVYxtNbeSyDKw-YxTlMPxp5
 
 ## 데이터 연동 방식
 
-기본값은 공개 Google Sheet CSV 조회입니다.
+기본값은 공개 Google Sheet CSV 조회입니다. 프로덕션에서는 아이폰 홈 화면 앱의 교차 출처 요청 제한을 피하기 위해 같은 도메인의 Cloudflare Worker API(`/api/sheets`)가 Google Sheet를 대신 조회합니다. 로컬 개발에서는 Google Sheet를 직접 조회합니다.
 
 [web/.env.local](/Users/hkim/Project/yangwoo_tool/yangwoo_tool/retreat_guidebook/web/.env.local):
 

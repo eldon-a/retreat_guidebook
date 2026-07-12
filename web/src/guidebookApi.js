@@ -226,6 +226,27 @@ function fetchGoogleSheetViaJsonp(sheetId, sheetName) {
 }
 
 async function fetchCsvSheet(sheetId, sheetName) {
+  const proxyUrl = new URL('/api/sheets', window.location.origin);
+  proxyUrl.searchParams.set('id', sheetId);
+  proxyUrl.searchParams.set('sheet', sheetName);
+
+  try {
+    const proxyResponse = await fetchWithTimeout(proxyUrl.toString(), {
+      method: 'GET',
+      credentials: 'same-origin',
+    });
+
+    if (
+      proxyResponse.ok &&
+      proxyResponse.headers.get('X-Guidebook-Source') === 'google-sheet'
+    ) {
+      return rowsToObjects(parseCsv(await proxyResponse.text()));
+    }
+  } catch (error) {
+    // Local Vite development has no Worker API, so continue with the direct
+    // Google request. Production normally succeeds through the proxy above.
+  }
+
   const url = new URL(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`);
   url.searchParams.set('tqx', 'out:csv');
   url.searchParams.set('sheet', sheetName);
