@@ -83,7 +83,7 @@ const initPushNotifications = () => {
   });
 
   const script = document.createElement('script');
-  script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+  script.src = '/vendor/onesignal/OneSignalSDK.page.es6.js?v=160607';
   script.defer = true;
   script.onload = () => {
     if (window.__oneSignalInitStage === 'SDK 콜백 대기') {

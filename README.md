@@ -171,6 +171,8 @@ VITE_ONESIGNAL_APP_ID=OneSignal에서 발급된 App ID
 
 5. Cloudflare에서 다시 배포합니다.
 
+아이폰 홈 화면 앱에서는 외부 CDN 요청이 멈추는 경우가 있어, 앱은 OneSignal 페이지 SDK·서비스 워커 SDK·API를 `/vendor/onesignal/` 경로의 Cloudflare Worker를 통해 같은 도메인으로 중계합니다.
+
 관리자는 OneSignal 대시보드의 Messages 또는 New Push 메뉴에서 긴급공지를 작성해 전체 구독자에게 보낼 수 있습니다. 참가자는 배포된 웹앱에 접속해 브라우저 알림 권한을 허용해야 푸시를 받을 수 있습니다.
 
 ## 실행
