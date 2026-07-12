@@ -561,19 +561,7 @@ function writeCache(source, data) {
 }
 
 export async function fetchGuidebookData({ force = false } = {}) {
-  if (GUIDEBOOK_API_URL) {
-    try {
-      const data = await fetchFromAppsScript(GUIDEBOOK_API_URL);
-      writeCache('apps-script', data);
-      return { source: 'apps-script', data, cached: false };
-    } catch (error) {
-      if (!force) {
-        const cached = readCache({ allowStale: true });
-        if (cached) return { source: cached.source, data: cached.data, cached: true };
-      }
-      throw error;
-    }
-  }
+  let lastError = null;
 
   if (GOOGLE_SHEET_ID) {
     try {
@@ -581,13 +569,26 @@ export async function fetchGuidebookData({ force = false } = {}) {
       writeCache('google-sheet', data);
       return { source: 'google-sheet', data, cached: false };
     } catch (error) {
-      if (!force) {
-        const cached = readCache({ allowStale: true });
-        if (cached) return { source: cached.source, data: cached.data, cached: true };
-      }
-      throw error;
+      lastError = error;
     }
   }
+
+  if (GUIDEBOOK_API_URL) {
+    try {
+      const data = await fetchFromAppsScript(GUIDEBOOK_API_URL);
+      writeCache('apps-script', data);
+      return { source: 'apps-script', data, cached: false };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!force) {
+    const cached = readCache({ allowStale: true });
+    if (cached) return { source: cached.source, data: cached.data, cached: true };
+  }
+
+  if (lastError) throw lastError;
 
   return { source: 'sample', data: sampleGuidebookData, cached: false };
 }

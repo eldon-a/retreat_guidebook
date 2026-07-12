@@ -112,7 +112,7 @@ VITE_GUIDEBOOK_API_URL=
 VITE_ONESIGNAL_APP_ID=
 ```
 
-Apps Script API를 배포하면 `VITE_GUIDEBOOK_API_URL`에 배포 URL을 넣으면 됩니다. 이 값이 있으면 앱은 Apps Script API를 우선 사용하고, 없으면 Google Sheet CSV를 직접 읽습니다. 게시판 글/댓글 작성은 Google Sheet에 쓰기가 필요하므로 `VITE_GUIDEBOOK_API_URL`이 설정된 상태에서만 사용할 수 있습니다.
+Apps Script API를 배포하면 `VITE_GUIDEBOOK_API_URL`에 배포 URL을 넣으면 됩니다. 안내 데이터는 아이폰 홈 화면 앱에서도 안정적으로 읽을 수 있도록 Google Sheet 프록시를 우선 사용하고, 프록시 조회가 실패하면 Apps Script API를 사용합니다. 게시판 글/댓글 작성은 Google Sheet에 쓰기가 필요하므로 `VITE_GUIDEBOOK_API_URL`이 설정된 상태에서만 사용할 수 있습니다.
 
 Apps Script 코드는 [apps-script/Code.gs](/Users/hkim/Project/yangwoo_tool/yangwoo_tool/retreat_guidebook/apps-script/Code.gs)에 있습니다.
 
