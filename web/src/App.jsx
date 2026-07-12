@@ -66,7 +66,7 @@ async function getOneSignalClient() {
 
   return withTimeout(
     window.__oneSignalInitPromise,
-    12000,
+    30000,
     'OneSignal SDK initialization timed out'
   );
 }

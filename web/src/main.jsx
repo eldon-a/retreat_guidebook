@@ -22,14 +22,17 @@ const initPushNotifications = () => {
     rejectInit = reject;
     const timeoutId = window.setTimeout(() => {
       reject(new Error('OneSignal SDK initialization timed out'));
-    }, 12000);
+    }, 30000);
 
     window.OneSignalDeferred.push(async (OneSignal) => {
       try {
         await OneSignal.init({
           appId: oneSignalAppId,
-          serviceWorkerPath: 'OneSignalSDKWorker.js',
-          serviceWorkerParam: { scope: '/' },
+          // Keep OneSignal away from the root PWA service worker scope. A root
+          // scoped OneSignal worker can replace the app worker (and vice versa),
+          // which is particularly fragile for iOS Home Screen web apps.
+          serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js',
+          serviceWorkerParam: { scope: '/push/onesignal/' },
         });
         window.clearTimeout(timeoutId);
         window.__oneSignal = OneSignal;
@@ -55,7 +58,7 @@ const initPushNotifications = () => {
 
 initPushNotifications();
 
-if ('serviceWorker' in navigator && import.meta.env.PROD && !import.meta.env.VITE_ONESIGNAL_APP_ID) {
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js').catch((error) => {
       console.warn('[service-worker] registration failed', error);

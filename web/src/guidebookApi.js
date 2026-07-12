@@ -4,6 +4,7 @@ const GUIDEBOOK_API_URL = (import.meta.env.VITE_GUIDEBOOK_API_URL || '').trim();
 const GOOGLE_SHEET_ID = (import.meta.env.VITE_GOOGLE_SHEET_ID || '').trim();
 const CACHE_KEY = 'retreatGuidebook.data.v2';
 const CACHE_TTL_MS = 60 * 1000;
+const REQUEST_TIMEOUT_MS = 10000;
 export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_EXTENSIONS = new Set([
   'pdf',
@@ -145,19 +146,106 @@ function rowsToObjects(rows) {
   });
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error('요청 시간이 초과되었습니다.');
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function googleVisualizationTableToObjects(table) {
+  const headers = (table?.cols || []).map((column) => normalize(column?.label || column?.id));
+
+  return (table?.rows || []).map((row) => {
+    const item = {};
+    headers.forEach((header, index) => {
+      if (!header) return;
+      const cell = row?.c?.[index];
+      item[header] = normalize(cell?.f ?? cell?.v);
+    });
+    return item;
+  });
+}
+
+function fetchGoogleSheetViaJsonp(sheetId, sheetName) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `__guidebookSheetCallback${Date.now()}${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement('script');
+    const url = new URL(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`);
+    let settled = false;
+
+    const cleanup = () => {
+      window.clearTimeout(timeoutId);
+      script.remove();
+      delete window[callbackName];
+    };
+    const fail = (error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
+    window[callbackName] = (payload) => {
+      if (settled) return;
+      if (payload?.status === 'error' || !payload?.table) {
+        const message = payload?.errors?.[0]?.detailed_message || `${sheetName} 시트 응답이 올바르지 않습니다.`;
+        fail(new Error(message));
+        return;
+      }
+
+      settled = true;
+      const rows = googleVisualizationTableToObjects(payload.table);
+      cleanup();
+      resolve(rows);
+    };
+
+    url.searchParams.set('sheet', sheetName);
+    url.searchParams.set('headers', '1');
+    url.searchParams.set('tqx', `out:json;responseHandler:${callbackName}`);
+    url.searchParams.set('cacheBust', String(Date.now()));
+    script.src = url.toString();
+    script.async = true;
+    script.onerror = () => fail(new Error(`${sheetName} 시트 대체 조회 실패`));
+
+    const timeoutId = window.setTimeout(
+      () => fail(new Error(`${sheetName} 시트 대체 조회 시간이 초과되었습니다.`)),
+      REQUEST_TIMEOUT_MS
+    );
+    document.head.appendChild(script);
+  });
+}
+
 async function fetchCsvSheet(sheetId, sheetName) {
   const url = new URL(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`);
   url.searchParams.set('tqx', 'out:csv');
   url.searchParams.set('sheet', sheetName);
   url.searchParams.set('cacheBust', String(Date.now()));
 
-  const response = await fetch(url.toString(), {
-    method: 'GET',
-    credentials: 'omit',
-  });
+  let response;
+  try {
+    response = await fetchWithTimeout(url.toString(), {
+      method: 'GET',
+      credentials: 'omit',
+    });
+  } catch (error) {
+    // iOS Home Screen web apps can leave cross-origin fetches pending even
+    // though the same request succeeds in a normal browser tab. Google
+    // Visualization's callback transport does not depend on fetch/CORS.
+    return fetchGoogleSheetViaJsonp(sheetId, sheetName);
+  }
 
   if (!response.ok) {
-    throw new Error(`${sheetName} 시트 조회 실패: HTTP ${response.status}`);
+    return fetchGoogleSheetViaJsonp(sheetId, sheetName);
   }
 
   return rowsToObjects(parseCsv(await response.text()));
@@ -186,7 +274,7 @@ async function fetchFromAppsScript(apiUrl) {
   url.searchParams.set('action', 'getGuidebook');
   url.searchParams.set('cacheBust', String(Date.now()));
 
-  const response = await fetch(url.toString(), {
+  const response = await fetchWithTimeout(url.toString(), {
     method: 'GET',
     credentials: 'omit',
   });
@@ -208,7 +296,7 @@ async function fetchBoardFromAppsScript(apiUrl) {
   url.searchParams.set('action', 'getBoard');
   url.searchParams.set('cacheBust', String(Date.now()));
 
-  const response = await fetch(url.toString(), {
+  const response = await fetchWithTimeout(url.toString(), {
     method: 'GET',
     credentials: 'omit',
   });
@@ -412,7 +500,7 @@ async function postToAppsScript(payload) {
     throw new Error('게시판 작성은 Apps Script API 연동 후 사용할 수 있습니다.');
   }
 
-  const response = await fetch(GUIDEBOOK_API_URL, {
+  const response = await fetchWithTimeout(GUIDEBOOK_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'text/plain;charset=utf-8',
@@ -433,10 +521,10 @@ async function postToAppsScript(payload) {
   return data;
 }
 
-function readCache() {
+function readCache({ allowStale = false } = {}) {
   try {
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-    if (cached && Date.now() - cached.savedAt < CACHE_TTL_MS) return cached;
+    if (cached && (allowStale || Date.now() - cached.savedAt < CACHE_TTL_MS)) return cached;
   } catch (e) {
     // Ignore broken cache payloads.
   }
@@ -459,7 +547,7 @@ export async function fetchGuidebookData({ force = false } = {}) {
       return { source: 'apps-script', data, cached: false };
     } catch (error) {
       if (!force) {
-        const cached = readCache();
+        const cached = readCache({ allowStale: true });
         if (cached) return { source: cached.source, data: cached.data, cached: true };
       }
       throw error;
@@ -473,7 +561,7 @@ export async function fetchGuidebookData({ force = false } = {}) {
       return { source: 'google-sheet', data, cached: false };
     } catch (error) {
       if (!force) {
-        const cached = readCache();
+        const cached = readCache({ allowStale: true });
         if (cached) return { source: cached.source, data: cached.data, cached: true };
       }
       throw error;
