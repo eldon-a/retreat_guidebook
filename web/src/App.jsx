@@ -143,7 +143,11 @@ function NotificationControl() {
       });
     }).catch((error) => {
       console.warn('[notifications] OneSignal initialization failed', error);
-      setStatusMessage('알림 설정을 불러오지 못했습니다.');
+      setStatusMessage(
+        error?.message
+          ? `알림 설정 실패: ${error.message}`
+          : '알림 설정을 불러오지 못했습니다.'
+      );
     });
   }, [oneSignalEnabled]);
 

@@ -3,6 +3,25 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './styles.css';
 
+async function removeConflictingAppServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+
+  try {
+    const registration = await navigator.serviceWorker.getRegistration('/');
+    const workers = [registration?.active, registration?.waiting, registration?.installing];
+    const hasAppWorker = workers.some((worker) => {
+      if (!worker?.scriptURL) return false;
+      return new URL(worker.scriptURL).pathname === '/service-worker.js';
+    });
+
+    if (registration && hasAppWorker) {
+      await registration.unregister();
+    }
+  } catch (error) {
+    console.warn('[service-worker] conflict cleanup failed', error);
+  }
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
@@ -26,13 +45,9 @@ const initPushNotifications = () => {
 
     window.OneSignalDeferred.push(async (OneSignal) => {
       try {
+        await removeConflictingAppServiceWorker();
         await OneSignal.init({
           appId: oneSignalAppId,
-          // Keep OneSignal away from the root PWA service worker scope. A root
-          // scoped OneSignal worker can replace the app worker (and vice versa),
-          // which is particularly fragile for iOS Home Screen web apps.
-          serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js',
-          serviceWorkerParam: { scope: '/push/onesignal/' },
         });
         window.clearTimeout(timeoutId);
         window.__oneSignal = OneSignal;
@@ -58,7 +73,10 @@ const initPushNotifications = () => {
 
 initPushNotifications();
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// The current OneSignal "Typical Site" configuration owns the root scope.
+// Registering the app cache worker at the same scope would replace it and
+// break push initialization, especially in iOS Home Screen apps.
+if ('serviceWorker' in navigator && import.meta.env.PROD && !import.meta.env.VITE_ONESIGNAL_APP_ID) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js').catch((error) => {
       console.warn('[service-worker] registration failed', error);
