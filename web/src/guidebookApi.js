@@ -41,15 +41,30 @@ const SHEET_NAMES = {
 };
 
 const SHEET_PRIMARY_HEADERS = {
-  [SHEET_NAMES.basic]: 'key',
-  [SHEET_NAMES.schedule]: 'day_id',
-  [SHEET_NAMES.rooms]: 'room_no',
-  [SHEET_NAMES.contacts]: 'category',
-  [SHEET_NAMES.notices]: 'notice_id',
+  [SHEET_NAMES.basic]: ['key'],
+  [SHEET_NAMES.schedule]: ['day_id'],
+  [SHEET_NAMES.rooms]: ['객실번호', 'room_no'],
+  [SHEET_NAMES.contacts]: ['category'],
+  [SHEET_NAMES.notices]: ['notice_id'],
 };
 
 function normalize(value) {
   return String(value ?? '').trim();
+}
+
+function pickField(row, keys) {
+  for (const key of keys) {
+    const value = normalize(row[key]);
+    if (value) return value;
+  }
+  return '';
+}
+
+function splitNameList(value) {
+  return normalize(value)
+    .split(/[,\n·、]/)
+    .map((name) => normalize(name))
+    .filter(Boolean);
 }
 
 function fileExtension(fileName) {
@@ -157,9 +172,9 @@ function rowsToObjects(rows) {
 function parseCsvSheet(text, sheetName) {
   const rows = parseCsv(text);
   const headers = (rows[0] || []).map((header) => normalize(header));
-  const requiredHeader = SHEET_PRIMARY_HEADERS[sheetName];
+  const acceptedHeaders = SHEET_PRIMARY_HEADERS[sheetName] || [];
 
-  if (!requiredHeader || !headers.includes(requiredHeader)) {
+  if (!acceptedHeaders.some((header) => headers.includes(header))) {
     throw new Error(`${sheetName} 시트 헤더를 확인하지 못했습니다.`);
   }
 
@@ -418,23 +433,27 @@ function normalizeRooms(rows) {
 
   const roomMap = new Map();
   rows.filter(isVisible).forEach((row) => {
-    const roomNo = normalize(row.room_no);
-    const name = normalize(row.name);
-    if (!roomNo || !name) return;
+    const roomNo = pickField(row, ['객실번호', 'room_no']);
+    if (!roomNo) return;
+
+    const representative = pickField(row, ['방 대표', '방대표', 'representative']);
+    const phone = pickField(row, ['방대표 전화번호', '방 대표 전화번호', 'phone']);
+    const members = splitNameList(pickField(row, ['명단', 'members', 'name']));
 
     if (!roomMap.has(roomNo)) {
       roomMap.set(roomNo, {
         roomNo,
-        building: normalize(row.building),
-        floor: normalize(row.floor),
+        representative,
+        phone,
         members: [],
       });
     }
 
-    roomMap.get(roomNo).members.push({
-      name,
-      organization: normalize(row.organization),
-      title: normalize(row.title),
+    const room = roomMap.get(roomNo);
+    if (representative && !room.representative) room.representative = representative;
+    if (phone && !room.phone) room.phone = phone;
+    members.forEach((name) => {
+      room.members.push({ name });
     });
   });
 
