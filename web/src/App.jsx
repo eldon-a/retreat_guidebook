@@ -34,8 +34,8 @@ function buildRoomRows(roomList) {
   return roomList.flatMap((room) =>
     room.members.map((member) => ({
       roomNo: room.roomNo,
-      building: room.building,
-      floor: room.floor,
+      representative: room.representative,
+      phone: room.phone,
       ...member,
     }))
   );
@@ -362,18 +362,25 @@ function RoomView({ rooms }) {
 
     if (mode === 'room') {
       const room = rooms.find((item) => normalizeRoom(item.roomNo) === normalized);
-      return room ? room.members.map((member) => ({ ...member, roomNo: room.roomNo, building: room.building, floor: room.floor })) : [];
+      return room
+        ? room.members.map((member) => ({
+            ...member,
+            roomNo: room.roomNo,
+            representative: room.representative,
+            phone: room.phone,
+          }))
+        : [];
     }
 
     return roomRows.filter((row) => cleanText(row.name) === normalized);
-  }, [mode, query, roomRows]);
+  }, [mode, query, roomRows, rooms]);
 
   function submitSearch(event) {
     event.preventDefault();
     setSearched(true);
   }
 
-  const placeholder = mode === 'room' ? '예: 501 또는 A-301' : '예: 김민수';
+  const placeholder = mode === 'room' ? '예: 1033' : '예: 김민수';
 
   return (
     <section className="view workshop-view">
@@ -419,11 +426,24 @@ function RoomView({ rooms }) {
               <strong>{query}호</strong>
               <span>{results.length}명 배정</span>
             </div>
+            {results[0]?.representative && (
+              <div className="room-rep">
+                <span className="room-rep-label">방 대표</span>
+                <span className="room-rep-name">{results[0].representative}</span>
+                {results[0].phone && (
+                  <a className="room-rep-phone" href={`tel:${results[0].phone}`}>
+                    {results[0].phone}
+                  </a>
+                )}
+              </div>
+            )}
             <ul className="room-list">
-              {results.map((person) => (
-                <li key={`${person.roomNo}-${person.name}-${person.organization}`}>
+              {results.map((person, index) => (
+                <li key={`${person.roomNo}-${person.name}-${index}`}>
                   <strong>{person.name}</strong>
-                  <span>{person.organization} / {person.title}</span>
+                  {person.name === person.representative && (
+                    <span className="room-rep-badge">방 대표</span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -432,10 +452,18 @@ function RoomView({ rooms }) {
 
         {searched && results.length > 0 && mode === 'name' && (
           <ul className="name-results">
-            {results.map((person) => (
-              <li key={`${person.roomNo}-${person.name}-${person.organization}`}>
+            {results.map((person, index) => (
+              <li key={`${person.roomNo}-${person.name}-${index}`}>
                 <strong>{person.roomNo}호</strong>
-                <span>{person.name} / {person.organization} / {person.title}</span>
+                <span>{person.name}</span>
+                {person.representative && (
+                  <span className="room-rep-inline">
+                    방 대표 {person.representative}
+                    {person.phone && (
+                      <a href={`tel:${person.phone}`}>{person.phone}</a>
+                    )}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

@@ -4,7 +4,7 @@
  * Google Sheet 탭:
  * - 기본정보: key, value
  * - 일정: day_id, day_label, date, time, title, place, type, note, visible
- * - 방배정: room_no, building, floor, name, organization, title, visible
+ * - 방배정: 객실번호, 방 대표, 방대표 전화번호, 인원수, 명단(쉼표로 구분), visible
  * - 연락처: category, label, name, phone, note, sort_order, visible
  * - 공지: notice_id, level, time, title, body, target, pinned, visible, push_status
  * - 게시글: post_id, created_at, board_type, author, title, body, status, hidden_reason
@@ -367,30 +367,50 @@ function getScheduleDays() {
   return order.map((id) => dayMap[id]);
 }
 
+function pickField(row, keys) {
+  for (let i = 0; i < keys.length; i += 1) {
+    const value = clean(row[keys[i]]);
+    if (value) return value;
+  }
+  return '';
+}
+
+function splitNameList(value) {
+  return clean(value)
+    .split(/[,\n·、]/)
+    .map(clean)
+    .filter(function (name) {
+      return name;
+    });
+}
+
 function getRooms() {
   const rows = readObjects(CONFIG.SHEETS.ROOMS).filter(isVisible);
   const roomMap = {};
   const order = [];
 
   rows.forEach((row) => {
-    const roomNo = clean(row.room_no);
-    const name = clean(row.name);
-    if (!roomNo || !name) return;
+    const roomNo = pickField(row, ['객실번호', 'room_no']);
+    if (!roomNo) return;
+
+    const representative = pickField(row, ['방 대표', '방대표', 'representative']);
+    const phone = pickField(row, ['방대표 전화번호', '방 대표 전화번호', 'phone']);
+    const members = splitNameList(pickField(row, ['명단', 'members', 'name']));
 
     if (!roomMap[roomNo]) {
       roomMap[roomNo] = {
         roomNo,
-        building: clean(row.building),
-        floor: clean(row.floor),
+        representative,
+        phone,
         members: [],
       };
       order.push(roomNo);
     }
 
-    roomMap[roomNo].members.push({
-      name,
-      organization: clean(row.organization),
-      title: clean(row.title),
+    if (representative && !roomMap[roomNo].representative) roomMap[roomNo].representative = representative;
+    if (phone && !roomMap[roomNo].phone) roomMap[roomNo].phone = phone;
+    members.forEach((name) => {
+      roomMap[roomNo].members.push({ name });
     });
   });
 
